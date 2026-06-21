@@ -1,0 +1,12 @@
+goal_pub_topic: "/planning/click_goal"
+odom_topic: "/Odom_high_freq"
+start_trigger_topic: "/traj_start_trigger"
+land_topic: "/px4ctrl/takeoff_land"
+
+# 2: timed start after program launch
+# 3: start when px4ctrl publishes /traj_start_trigger after takeoff
+start_trigger_type: 3
+start_program_delay: 3.0
+landing_trigger_delay: 1.5
+odom_timeout: 0.2
+publish_dt: 0.2
