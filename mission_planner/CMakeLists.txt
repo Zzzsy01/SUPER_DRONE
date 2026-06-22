@@ -58,3 +58,10 @@ add_executable(super_drone_mission
 target_link_libraries(super_drone_mission
         ${THIRD_PARTY}
         )
+
+add_executable(goal_feeder
+        Apps/ros1_goal_feeder.cpp
+        )
+target_link_libraries(goal_feeder
+        ${THIRD_PARTY}
+        )

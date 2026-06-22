@@ -1,0 +1,24 @@
+<launch>
+    <arg name="planner_config_name" default="super_drone_ros1.yaml" />
+    <arg name="goal_topic" default="/planning/click_goal" />
+    <arg name="frame_id" default="world" />
+    <arg name="goal_x" default="2.0" />
+    <arg name="goal_y" default="0.0" />
+    <arg name="goal_z" default="1.0" />
+    <arg name="goal_delay" default="3.0" />
+
+    <param name="/use_sim_time" value="true" />
+
+    <node pkg="super_planner" name="fsm_node" type="fsm_node" output="screen">
+        <param name="config_name" value="$(arg planner_config_name)" type="string" />
+    </node>
+
+    <node pkg="mission_planner" name="goal_feeder" type="goal_feeder" output="screen">
+        <param name="goal_topic" value="$(arg goal_topic)" type="string" />
+        <param name="frame_id" value="$(arg frame_id)" type="string" />
+        <param name="goal_x" value="$(arg goal_x)" type="double" />
+        <param name="goal_y" value="$(arg goal_y)" type="double" />
+        <param name="goal_z" value="$(arg goal_z)" type="double" />
+        <param name="goal_delay" value="$(arg goal_delay)" type="double" />
+    </node>
+</launch>
