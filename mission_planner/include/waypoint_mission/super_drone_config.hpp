@@ -80,7 +80,7 @@ namespace mission_planner {
         explicit SuperDroneMissionConfig(const string &cfg_path) {
             yaml_loader::YamlLoader loader(cfg_path);
 
-            loader.LoadParam("start_trigger_type", start_trigger_type, SUPER_DRONE_PX4CTRL);
+            loader.LoadParam("start_trigger_type", start_trigger_type, static_cast<int>(SUPER_DRONE_PX4CTRL));
             loader.LoadParam("start_program_delay", start_program_delay, 3.0);
             loader.LoadParam("landing_trigger_delay", landing_trigger_delay, 1.5);
             loader.LoadParam("odom_timeout", odom_timeout, 0.2);
