@@ -1,0 +1,79 @@
+<launch>
+    <arg name="gui" default="true" />
+    <arg name="rviz" default="true" />
+    <arg name="auto_goal" default="true" />
+    <arg name="world_name" default="$(find mission_planner)/worlds/obstacle_course.world" />
+    <arg name="planner_config_name" default="super_drone_ros1.yaml" />
+
+    <arg name="gazebo_cloud_topic" default="/gazebo_lite/points" />
+    <arg name="fallback_geometry_cloud" default="true" />
+    <arg name="cloud_publish_rate" default="8.0" />
+    <arg name="point_resolution" default="0.10" />
+
+    <arg name="init_x" default="0.0" />
+    <arg name="init_y" default="0.0" />
+    <arg name="init_z" default="1.0" />
+    <arg name="mock_publish_rate" default="100.0" />
+    <arg name="mock_max_vel" default="1.5" />
+    <arg name="mock_max_acc" default="1.0" />
+    <arg name="mock_position_gain" default="1.2" />
+
+    <arg name="goal_delay" default="3.0" />
+    <arg name="goal_x" default="8.0" />
+    <arg name="goal_y" default="0.0" />
+    <arg name="goal_z" default="1.0" />
+    <arg name="goal_radius" default="0.5" />
+    <arg name="validation_timeout" default="120.0" />
+
+    <param name="/use_sim_time" value="false" />
+
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+        <arg name="world_name" value="$(arg world_name)" />
+        <arg name="gui" value="$(arg gui)" />
+        <arg name="paused" value="false" />
+        <arg name="use_sim_time" value="false" />
+    </include>
+
+    <node pkg="super_planner" name="fsm_node" type="fsm_node" output="screen">
+        <param name="config_name" value="$(arg planner_config_name)" type="string" />
+    </node>
+
+    <node pkg="mission_planner" name="gazebo_cloud_bridge" type="gazebo_cloud_bridge" output="screen">
+        <param name="input_topic" value="$(arg gazebo_cloud_topic)" type="string" />
+        <param name="fallback_geometry_cloud" value="$(arg fallback_geometry_cloud)" type="bool" />
+        <param name="course_type" value="obstacle_course" type="string" />
+        <param name="publish_rate" value="$(arg cloud_publish_rate)" type="double" />
+        <param name="point_resolution" value="$(arg point_resolution)" type="double" />
+    </node>
+
+    <node pkg="mission_planner" name="gazebo_mock_drone_tracker" type="gazebo_mock_drone_tracker" output="screen">
+        <param name="publish_rate" value="$(arg mock_publish_rate)" type="double" />
+        <param name="init_x" value="$(arg init_x)" type="double" />
+        <param name="init_y" value="$(arg init_y)" type="double" />
+        <param name="init_z" value="$(arg init_z)" type="double" />
+        <param name="max_vel" value="$(arg mock_max_vel)" type="double" />
+        <param name="max_acc" value="$(arg mock_max_acc)" type="double" />
+        <param name="position_gain" value="$(arg mock_position_gain)" type="double" />
+        <param name="model_name" value="mock_drone" type="string" />
+    </node>
+
+    <node if="$(arg auto_goal)" pkg="mission_planner" name="obstacle_course_goal_feeder" type="goal_feeder" output="screen">
+        <param name="goal_topic" value="/planning/click_goal" type="string" />
+        <param name="frame_id" value="world" type="string" />
+        <param name="goal_delay" value="$(arg goal_delay)" type="double" />
+        <param name="goal_x" value="$(arg goal_x)" type="double" />
+        <param name="goal_y" value="$(arg goal_y)" type="double" />
+        <param name="goal_z" value="$(arg goal_z)" type="double" />
+    </node>
+
+    <node pkg="mission_planner" name="obstacle_course_validator" type="obstacle_course_validator" output="screen">
+        <param name="goal_x" value="$(arg goal_x)" type="double" />
+        <param name="goal_y" value="$(arg goal_y)" type="double" />
+        <param name="goal_z" value="$(arg goal_z)" type="double" />
+        <param name="goal_radius" value="$(arg goal_radius)" type="double" />
+        <param name="validation_timeout" value="$(arg validation_timeout)" type="double" />
+    </node>
+
+    <node if="$(arg rviz)" pkg="rviz" name="gazebo_obstacle_course_rviz" type="rviz"
+          args="-d $(find mission_planner)/rviz/gazebo_obstacle_course.rviz" output="screen" />
+</launch>

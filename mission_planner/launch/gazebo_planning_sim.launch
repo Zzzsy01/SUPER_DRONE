@@ -1,0 +1,115 @@
+<launch>
+    <arg name="gui" default="true" />
+    <arg name="rviz" default="true" />
+    <arg name="world_name" default="$(find mission_planner)/worlds/competition_smoke.world" />
+    <arg name="planner_config_name" default="super_drone_ros1.yaml" />
+
+    <arg name="gazebo_cloud_topic" default="/gazebo_lite/points" />
+    <arg name="fallback_geometry_cloud" default="true" />
+    <arg name="cloud_publish_rate" default="5.0" />
+    <arg name="point_resolution" default="0.12" />
+
+    <arg name="init_x" default="0.0" />
+    <arg name="init_y" default="0.0" />
+    <arg name="init_z" default="1.0" />
+    <arg name="mock_publish_rate" default="100.0" />
+    <arg name="mock_max_vel" default="1.5" />
+    <arg name="mock_max_acc" default="1.0" />
+    <arg name="mock_position_gain" default="1.2" />
+
+    <arg name="reach_radius" default="0.6" />
+    <arg name="goal_switch_delay" default="1.0" />
+    <arg name="goal_initial_delay" default="2.0" />
+    <arg name="validation_timeout" default="120.0" />
+
+    <arg name="goal1_x" default="1.5" />
+    <arg name="goal1_y" default="0.0" />
+    <arg name="goal1_z" default="1.0" />
+    <arg name="goal2_x" default="3.0" />
+    <arg name="goal2_y" default="0.0" />
+    <arg name="goal2_z" default="1.0" />
+    <arg name="goal3_x" default="5.0" />
+    <arg name="goal3_y" default="0.0" />
+    <arg name="goal3_z" default="1.0" />
+    <arg name="goal4_x" default="7.2" />
+    <arg name="goal4_y" default="0.0" />
+    <arg name="goal4_z" default="1.0" />
+    <arg name="final_x" default="9.8" />
+    <arg name="final_y" default="0.0" />
+    <arg name="final_z" default="1.0" />
+
+    <param name="/use_sim_time" value="false" />
+
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+        <arg name="world_name" value="$(arg world_name)" />
+        <arg name="gui" value="$(arg gui)" />
+        <arg name="paused" value="false" />
+        <arg name="use_sim_time" value="false" />
+    </include>
+
+    <node pkg="super_planner" name="fsm_node" type="fsm_node" output="screen">
+        <param name="config_name" value="$(arg planner_config_name)" type="string" />
+    </node>
+
+    <node pkg="mission_planner" name="gazebo_cloud_bridge" type="gazebo_cloud_bridge" output="screen">
+        <param name="input_topic" value="$(arg gazebo_cloud_topic)" type="string" />
+        <param name="fallback_geometry_cloud" value="$(arg fallback_geometry_cloud)" type="bool" />
+        <param name="publish_rate" value="$(arg cloud_publish_rate)" type="double" />
+        <param name="point_resolution" value="$(arg point_resolution)" type="double" />
+    </node>
+
+    <node pkg="mission_planner" name="gazebo_mock_drone_tracker" type="gazebo_mock_drone_tracker" output="screen">
+        <param name="publish_rate" value="$(arg mock_publish_rate)" type="double" />
+        <param name="init_x" value="$(arg init_x)" type="double" />
+        <param name="init_y" value="$(arg init_y)" type="double" />
+        <param name="init_z" value="$(arg init_z)" type="double" />
+        <param name="max_vel" value="$(arg mock_max_vel)" type="double" />
+        <param name="max_acc" value="$(arg mock_max_acc)" type="double" />
+        <param name="position_gain" value="$(arg mock_position_gain)" type="double" />
+        <param name="model_name" value="mock_drone" type="string" />
+    </node>
+
+    <node pkg="mission_planner" name="competition_goal_sequence" type="competition_goal_sequence" output="screen">
+        <param name="reach_radius" value="$(arg reach_radius)" type="double" />
+        <param name="switch_delay" value="$(arg goal_switch_delay)" type="double" />
+        <param name="initial_delay" value="$(arg goal_initial_delay)" type="double" />
+        <param name="goal1_x" value="$(arg goal1_x)" type="double" />
+        <param name="goal1_y" value="$(arg goal1_y)" type="double" />
+        <param name="goal1_z" value="$(arg goal1_z)" type="double" />
+        <param name="goal2_x" value="$(arg goal2_x)" type="double" />
+        <param name="goal2_y" value="$(arg goal2_y)" type="double" />
+        <param name="goal2_z" value="$(arg goal2_z)" type="double" />
+        <param name="goal3_x" value="$(arg goal3_x)" type="double" />
+        <param name="goal3_y" value="$(arg goal3_y)" type="double" />
+        <param name="goal3_z" value="$(arg goal3_z)" type="double" />
+        <param name="goal4_x" value="$(arg goal4_x)" type="double" />
+        <param name="goal4_y" value="$(arg goal4_y)" type="double" />
+        <param name="goal4_z" value="$(arg goal4_z)" type="double" />
+        <param name="final_x" value="$(arg final_x)" type="double" />
+        <param name="final_y" value="$(arg final_y)" type="double" />
+        <param name="final_z" value="$(arg final_z)" type="double" />
+    </node>
+
+    <node pkg="mission_planner" name="sim_validator" type="sim_validator" output="screen">
+        <param name="validation_timeout" value="$(arg validation_timeout)" type="double" />
+        <param name="reach_radius" value="$(arg reach_radius)" type="double" />
+        <param name="goal1_x" value="$(arg goal1_x)" type="double" />
+        <param name="goal1_y" value="$(arg goal1_y)" type="double" />
+        <param name="goal1_z" value="$(arg goal1_z)" type="double" />
+        <param name="goal2_x" value="$(arg goal2_x)" type="double" />
+        <param name="goal2_y" value="$(arg goal2_y)" type="double" />
+        <param name="goal2_z" value="$(arg goal2_z)" type="double" />
+        <param name="goal3_x" value="$(arg goal3_x)" type="double" />
+        <param name="goal3_y" value="$(arg goal3_y)" type="double" />
+        <param name="goal3_z" value="$(arg goal3_z)" type="double" />
+        <param name="goal4_x" value="$(arg goal4_x)" type="double" />
+        <param name="goal4_y" value="$(arg goal4_y)" type="double" />
+        <param name="goal4_z" value="$(arg goal4_z)" type="double" />
+        <param name="final_x" value="$(arg final_x)" type="double" />
+        <param name="final_y" value="$(arg final_y)" type="double" />
+        <param name="final_z" value="$(arg final_z)" type="double" />
+    </node>
+
+    <node if="$(arg rviz)" pkg="rviz" name="gazebo_planning_rviz" type="rviz"
+          args="-d $(find mission_planner)/rviz/gazebo_planning_sim.rviz" output="screen" />
+</launch>

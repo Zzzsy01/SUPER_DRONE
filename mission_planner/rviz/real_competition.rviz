@@ -1,0 +1,70 @@
+Panels:
+  - Class: rviz/Displays
+    Name: Displays
+Visualization Manager:
+  Displays:
+    - Class: rviz/Grid
+      Enabled: true
+      Name: Ground Grid
+      Plane: XY
+      Plane Cell Count: 20
+      Cell Size: 1
+      Color: 160; 160; 160
+      Alpha: 0.5
+      Value: true
+    - Class: rviz/PointCloud2
+      Enabled: true
+      Name: Mid-360S FAST-LIO Cloud
+      Topic: /cloud_registered
+      Queue Size: 10
+      Style: Flat Squares
+      Size (m): 0.04
+      Color Transformer: Intensity
+      Channel Name: intensity
+      Alpha: 1
+      Value: true
+    - Class: rviz/Odometry
+      Enabled: true
+      Name: FAST-LIO Odom
+      Topic: /Odom_high_freq
+      Keep: 100
+      Shape:
+        Value: Arrow
+        Color: 255; 60; 60
+        Alpha: 1
+      Value: true
+    - Class: rviz/Path
+      Enabled: true
+      Name: SUPER Executed Path
+      Topic: /fsm_node/fsm/path
+      Color: 25; 120; 255
+      Alpha: 1
+      Line Width: 0.05
+      Value: true
+  Global Options:
+    Fixed Frame: world
+    Background Color: 32; 34; 36
+    Frame Rate: 30
+  Tools:
+    - Class: rviz/Interact
+    - Class: rviz/MoveCamera
+    - Class: rviz/Select
+    - Class: rviz/SetGoal
+      Topic: /planning/click_goal
+  Views:
+    Current:
+      Class: rviz/Orbit
+      Distance: 12
+      Focal Point:
+        X: 3
+        Y: 0
+        Z: 1
+      Pitch: 0.8
+      Yaw: 4.7
+      Target Frame: <Fixed Frame>
+      Value: Orbit (rviz)
+Window Geometry:
+  Height: 900
+  Width: 1400
+  X: 80
+  Y: 60

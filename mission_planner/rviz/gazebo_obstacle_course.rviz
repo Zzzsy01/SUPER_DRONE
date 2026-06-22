@@ -1,0 +1,85 @@
+Panels:
+  - Class: rviz/Displays
+    Name: Displays
+  - Class: rviz/Views
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Alpha: 0.5
+      Cell Size: 1
+      Class: rviz/Grid
+      Color: 160; 160; 160
+      Enabled: true
+      Name: Grid
+      Plane: XY
+      Reference Frame: world
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Class: rviz/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: Intensity
+      Enabled: true
+      Name: cloud_registered
+      Size (Pixels): 3
+      Size (m): 0.08
+      Style: Points
+      Topic: /cloud_registered
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /competition_sim/field_markers
+      Name: obstacle_markers
+    - Class: rviz/Odometry
+      Enabled: true
+      Keep: 400
+      Name: mock_drone_odom
+      Position Tolerance: 0.1
+      Shape: Arrow
+      Topic: /Odom_high_freq
+    - Class: rviz/Pose
+      Enabled: true
+      Name: planning_goal
+      Shape: Arrow
+      Topic: /planning/click_goal
+    - Alpha: 1
+      Buffer Length: 1
+      Class: rviz/Path
+      Color: 25; 255; 0
+      Enabled: true
+      Line Style: Lines
+      Line Width: 0.05
+      Name: fsm_path
+      Topic: /fsm_node/fsm/path
+    - Class: rviz/TF
+      Enabled: true
+      Frame Timeout: 15
+      Name: TF
+      Show Arrows: true
+      Show Axes: true
+      Show Names: true
+  Enabled: true
+  Global Options:
+    Background Color: 48; 48; 48
+    Fixed Frame: world
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz/Interact
+    - Class: rviz/MoveCamera
+    - Class: rviz/Select
+  Value: true
+  Views:
+    Current:
+      Class: rviz/Orbit
+      Distance: 12
+      Focal Point:
+        X: 4
+        Y: 0
+        Z: 0.5
+      Name: Current View
+      Pitch: 0.65
+      Target Frame: world
+      Yaw: 0.0
+Window Geometry:
+  Height: 900
+  Width: 1400
