@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
         roscpp
         std_msgs
         pcl_ros
+        sensor_msgs
         geometry_msgs
         nav_msgs
         message_generation
@@ -56,5 +57,12 @@ add_executable(super_drone_mission
         Apps/ros1_super_drone_mission.cpp
         )
 target_link_libraries(super_drone_mission
+        ${THIRD_PARTY}
+        )
+
+add_executable(offline_interface_feeder
+        Apps/ros1_offline_interface_feeder.cpp
+        )
+target_link_libraries(offline_interface_feeder
         ${THIRD_PARTY}
         )
