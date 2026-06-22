@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
         roscpp
         std_msgs
         pcl_ros
+        sensor_msgs
         geometry_msgs
         nav_msgs
         message_generation
@@ -63,5 +64,33 @@ add_executable(goal_feeder
         Apps/ros1_goal_feeder.cpp
         )
 target_link_libraries(goal_feeder
+        ${THIRD_PARTY}
+        )
+
+add_executable(competition_map_publisher
+        Apps/competition_map_publisher.cpp
+        )
+target_link_libraries(competition_map_publisher
+        ${THIRD_PARTY}
+        )
+
+add_executable(mock_drone_tracker
+        Apps/mock_drone_tracker.cpp
+        )
+target_link_libraries(mock_drone_tracker
+        ${THIRD_PARTY}
+        )
+
+add_executable(competition_goal_sequence
+        Apps/competition_goal_sequence.cpp
+        )
+target_link_libraries(competition_goal_sequence
+        ${THIRD_PARTY}
+        )
+
+add_executable(sim_validator
+        Apps/sim_validator.cpp
+        )
+target_link_libraries(sim_validator
         ${THIRD_PARTY}
         )

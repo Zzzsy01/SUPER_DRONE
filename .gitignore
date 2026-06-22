@@ -19,13 +19,21 @@ __pycache__/
 # Runtime logs
 **/log/
 **/logs/
+logs/
 *.log
 
 # Generated data
 *.bag
+*.bag.active
+*.mcap
+*.db3
 *.csv
 *.bin
 *.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
 *.ply
 *.pcd
 
