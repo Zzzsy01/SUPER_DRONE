@@ -23,6 +23,7 @@ logs/
 *.log
 
 # Generated data
+docs/reference/*.pdf
 *.bag
 *.bag.active
 *.mcap

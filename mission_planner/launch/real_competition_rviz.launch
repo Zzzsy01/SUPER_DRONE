@@ -1,0 +1,4 @@
+<launch>
+    <node pkg="rviz" name="real_competition_rviz" type="rviz"
+          args="-d $(find mission_planner)/rviz/real_competition.rviz" output="screen" />
+</launch>

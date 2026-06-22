@@ -1,0 +1,91 @@
+Panels:
+  - Class: rviz/Displays
+    Name: Displays
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz/Grid
+      Enabled: true
+      Name: Ground Grid
+      Plane: XY
+      Plane Cell Count: 20
+      Cell Size: 1
+      Color: 160; 160; 160
+      Alpha: 0.5
+      Value: true
+    - Class: rviz/PointCloud2
+      Enabled: true
+      Name: Gazebo-lite Cloud
+      Topic: /cloud_registered
+      Queue Size: 10
+      Style: Flat Squares
+      Size (m): 0.05
+      Color Transformer: Intensity
+      Channel Name: intensity
+      Alpha: 1
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Name: Gazebo-lite Field Markers
+      Marker Topic: /competition_sim/field_markers
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Odometry
+      Enabled: true
+      Name: Mock Drone Odom
+      Topic: /Odom_high_freq
+      Keep: 100
+      Shape:
+        Value: Arrow
+        Color: 255; 60; 60
+        Alpha: 1
+        Shaft Length: 0.55
+        Shaft Radius: 0.05
+        Head Length: 0.3
+        Head Radius: 0.1
+      Value: true
+    - Class: rviz/Path
+      Enabled: true
+      Name: SUPER Executed Path
+      Topic: /fsm_node/fsm/path
+      Color: 25; 120; 255
+      Alpha: 1
+      Line Width: 0.05
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Name: Current Goal
+      Marker Topic: /competition_sim/current_goal
+      Queue Size: 100
+      Value: true
+  Enabled: true
+  Global Options:
+    Fixed Frame: world
+    Background Color: 32; 34; 36
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz/Interact
+    - Class: rviz/MoveCamera
+    - Class: rviz/Select
+    - Class: rviz/FocusCamera
+    - Class: rviz/SetGoal
+      Topic: /planning/click_goal
+  Value: true
+  Views:
+    Current:
+      Class: rviz/Orbit
+      Distance: 14
+      Focal Point:
+        X: 5
+        Y: 0
+        Z: 0.8
+      Pitch: 0.82
+      Yaw: 4.7
+      Target Frame: <Fixed Frame>
+      Value: Orbit (rviz)
+Window Geometry:
+  Height: 900
+  Width: 1400
+  X: 80
+  Y: 60

@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
         pcl_ros
         sensor_msgs
         geometry_msgs
+        gazebo_msgs
         nav_msgs
         message_generation
         quadrotor_msgs
@@ -92,5 +93,19 @@ add_executable(sim_validator
         Apps/sim_validator.cpp
         )
 target_link_libraries(sim_validator
+        ${THIRD_PARTY}
+        )
+
+add_executable(gazebo_cloud_bridge
+        Apps/gazebo_cloud_bridge.cpp
+        )
+target_link_libraries(gazebo_cloud_bridge
+        ${THIRD_PARTY}
+        )
+
+add_executable(gazebo_mock_drone_tracker
+        Apps/gazebo_mock_drone_tracker.cpp
+        )
+target_link_libraries(gazebo_mock_drone_tracker
         ${THIRD_PARTY}
         )

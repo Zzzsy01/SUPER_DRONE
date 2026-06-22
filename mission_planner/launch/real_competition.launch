@@ -1,0 +1,14 @@
+<launch>
+    <arg name="planner_config_name" default="super_drone_ros1.yaml" />
+    <arg name="mission_config_name" default="super_drone_waypoint.yaml" />
+    <arg name="mission_data_name" default="super_drone_competition_template.txt" />
+
+    <node pkg="mission_planner" name="super_drone_mission" type="super_drone_mission" output="screen">
+        <param name="config_name" value="$(arg mission_config_name)" type="string" />
+        <param name="data_name" value="$(arg mission_data_name)" type="string" />
+    </node>
+
+    <node pkg="super_planner" name="fsm_node" type="fsm_node" output="screen">
+        <param name="config_name" value="$(arg planner_config_name)" type="string" />
+    </node>
+</launch>
