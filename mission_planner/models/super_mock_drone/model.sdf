@@ -1,0 +1,121 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+  <model name="super_mock_drone">
+    <static>false</static>
+    <allow_auto_disable>false</allow_auto_disable>
+    <link name="body">
+      <gravity>false</gravity>
+      <kinematic>true</kinematic>
+      <inertial>
+        <mass>1.0</mass>
+        <inertia>
+          <ixx>0.02</ixx>
+          <iyy>0.02</iyy>
+          <izz>0.04</izz>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyz>0</iyz>
+        </inertia>
+      </inertial>
+      <visual name="center_body">
+        <geometry>
+          <box>
+            <size>0.28 0.18 0.08</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.05 0.15 0.22 1</ambient>
+          <diffuse>0.05 0.35 0.55 1</diffuse>
+        </material>
+      </visual>
+      <visual name="front_marker">
+        <pose>0.18 0 0.03 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.12 0.06 0.04</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>1.0 0.2 0.05 1</ambient>
+          <diffuse>1.0 0.2 0.05 1</diffuse>
+        </material>
+      </visual>
+      <visual name="x_arm">
+        <pose>0 0 0 0 0 0.785398</pose>
+        <geometry>
+          <box>
+            <size>0.9 0.045 0.035</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.1 0.1 0.1 1</ambient>
+          <diffuse>0.15 0.15 0.15 1</diffuse>
+        </material>
+      </visual>
+      <visual name="y_arm">
+        <pose>0 0 0 0 0 -0.785398</pose>
+        <geometry>
+          <box>
+            <size>0.9 0.045 0.035</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.1 0.1 0.1 1</ambient>
+          <diffuse>0.15 0.15 0.15 1</diffuse>
+        </material>
+      </visual>
+      <visual name="rotor_front_left">
+        <pose>0.32 0.32 0.02 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.13</radius>
+            <length>0.018</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.1 0.8 0.95 0.8</ambient>
+          <diffuse>0.1 0.8 0.95 0.8</diffuse>
+        </material>
+      </visual>
+      <visual name="rotor_front_right">
+        <pose>0.32 -0.32 0.02 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.13</radius>
+            <length>0.018</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.1 0.8 0.95 0.8</ambient>
+          <diffuse>0.1 0.8 0.95 0.8</diffuse>
+        </material>
+      </visual>
+      <visual name="rotor_back_left">
+        <pose>-0.32 0.32 0.02 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.13</radius>
+            <length>0.018</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.1 0.8 0.95 0.8</ambient>
+          <diffuse>0.1 0.8 0.95 0.8</diffuse>
+        </material>
+      </visual>
+      <visual name="rotor_back_right">
+        <pose>-0.32 -0.32 0.02 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.13</radius>
+            <length>0.018</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.1 0.8 0.95 0.8</ambient>
+          <diffuse>0.1 0.8 0.95 0.8</diffuse>
+        </material>
+      </visual>
+    </link>
+  </model>
+</sdf>

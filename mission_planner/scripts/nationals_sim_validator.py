@@ -17,6 +17,7 @@ Goal = Tuple[float, float, float, float]
 class NationalsSimValidator:
     def __init__(self) -> None:
         self.validation_timeout = float(rospy.get_param("~validation_timeout", 120.0))
+        self.keep_running = bool(rospy.get_param("~keep_running", False))
         self.waypoints_path = rospy.get_param("~waypoints_path", "")
         self.min_cloud_rate = float(rospy.get_param("~min_cloud_rate", 2.0))
         self.min_odom_rate = float(rospy.get_param("~min_odom_rate", 50.0))
@@ -138,7 +139,8 @@ class NationalsSimValidator:
         )
         self.status_pub.publish(String(report))
         print(report, end="", flush=True)
-        rospy.signal_shutdown("nationals validation finished")
+        if not self.keep_running:
+            rospy.signal_shutdown("nationals validation finished")
 
 
 def main() -> None:

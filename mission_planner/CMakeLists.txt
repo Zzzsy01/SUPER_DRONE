@@ -35,6 +35,8 @@ catkin_install_python(PROGRAMS
         scripts/nationals_layout_cloud_publisher.py
         scripts/generate_nationals_waypoints.py
         scripts/nationals_sim_validator.py
+        scripts/gazebo_mock_drone_pose_bridge.py
+        scripts/nationals_waypoint_marker.py
         DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
         )
 
