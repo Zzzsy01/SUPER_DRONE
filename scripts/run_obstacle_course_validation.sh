@@ -6,13 +6,15 @@ WORKSPACE="${HOME}/super_ws"
 REPO="${WORKSPACE}/src/SUPER_DRONE"
 TIMEOUT_SEC="${TIMEOUT_SEC:-180}"
 ROS_PORT="${ROS_PORT:-11323}"
-export ROS_MASTER_URI="http://localhost:${ROS_PORT}"
-export ROS_HOSTNAME="${ROS_HOSTNAME:-localhost}"
+export ROS_MASTER_URI="http://127.0.0.1:${ROS_PORT}"
+export ROS_IP="${ROS_IP:-127.0.0.1}"
+export ROS_LOG_DIR="${ROS_LOG_DIR:-/tmp/super_drone_roslog}"
+unset ROS_HOSTNAME
 STAMP="$(date +%Y%m%d_%H%M%S)"
 LOG_DIR="${REPO}/logs"
 LOG_FILE="${LOG_DIR}/obstacle_course_${STAMP}.log"
 
-mkdir -p "${LOG_DIR}"
+mkdir -p "${LOG_DIR}" "${ROS_LOG_DIR}"
 echo "[obstacle_course] log: ${LOG_FILE}"
 
 cd "${WORKSPACE}" || exit 1
@@ -24,7 +26,7 @@ fi
 # shellcheck disable=SC1091
 source "${WORKSPACE}/devel/setup.bash"
 
-setsid bash -c "source '${WORKSPACE}/devel/setup.bash' && export ROS_MASTER_URI='${ROS_MASTER_URI}' ROS_HOSTNAME='${ROS_HOSTNAME}' && roslaunch mission_planner gazebo_obstacle_course.launch gui:=false rviz:=false auto_goal:=true" \
+setsid bash -c "source '${WORKSPACE}/devel/setup.bash' && unset ROS_HOSTNAME && export ROS_MASTER_URI='${ROS_MASTER_URI}' ROS_IP='${ROS_IP}' ROS_LOG_DIR='${ROS_LOG_DIR}' && roslaunch mission_planner gazebo_obstacle_course.launch gui:=false rviz:=false auto_goal:=true" \
     >> "${LOG_FILE}" 2>&1 &
 LAUNCH_PID=$!
 

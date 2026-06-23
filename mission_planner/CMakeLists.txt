@@ -31,6 +31,13 @@ catkin_package(
         #  DEPENDS system_lib
 )
 
+catkin_install_python(PROGRAMS
+        scripts/nationals_layout_cloud_publisher.py
+        scripts/generate_nationals_waypoints.py
+        scripts/nationals_sim_validator.py
+        DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+        )
+
 include_directories(
         SYSTEM
         include

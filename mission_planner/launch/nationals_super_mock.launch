@@ -1,0 +1,53 @@
+<launch>
+    <arg name="planner_config_name" default="super_drone_ros1.yaml" />
+    <arg name="mission_config_name" default="super_drone_nationals_mock.yaml" />
+    <arg name="layout_path" default="$(env HOME)/ws/gezogo-guosai/layout.json" />
+    <arg name="waypoints_path" default="$(find mission_planner)/data/nationals_seed_2026.txt" />
+    <arg name="frame_id" default="world" />
+    <arg name="cloud_publish_rate" default="5.0" />
+    <arg name="point_resolution" default="0.10" />
+
+    <arg name="init_x" default="0.0" />
+    <arg name="init_y" default="0.0" />
+    <arg name="init_z" default="1.0" />
+    <arg name="mock_publish_rate" default="100.0" />
+    <arg name="mock_max_vel" default="1.5" />
+    <arg name="mock_max_acc" default="1.0" />
+    <arg name="mock_position_gain" default="1.2" />
+    <arg name="validation_timeout" default="120.0" />
+
+    <param name="/use_sim_time" value="false" />
+
+    <node pkg="mission_planner" name="nationals_layout_cloud_publisher"
+          type="nationals_layout_cloud_publisher.py" output="screen">
+        <param name="layout_path" value="$(arg layout_path)" type="string" />
+        <param name="frame_id" value="$(arg frame_id)" type="string" />
+        <param name="publish_rate" value="$(arg cloud_publish_rate)" type="double" />
+        <param name="point_resolution" value="$(arg point_resolution)" type="double" />
+    </node>
+
+    <node pkg="super_planner" name="fsm_node" type="fsm_node" output="screen">
+        <param name="config_name" value="$(arg planner_config_name)" type="string" />
+    </node>
+
+    <node pkg="mission_planner" name="mock_drone_tracker" type="mock_drone_tracker" output="screen">
+        <param name="publish_rate" value="$(arg mock_publish_rate)" type="double" />
+        <param name="init_x" value="$(arg init_x)" type="double" />
+        <param name="init_y" value="$(arg init_y)" type="double" />
+        <param name="init_z" value="$(arg init_z)" type="double" />
+        <param name="max_vel" value="$(arg mock_max_vel)" type="double" />
+        <param name="max_acc" value="$(arg mock_max_acc)" type="double" />
+        <param name="position_gain" value="$(arg mock_position_gain)" type="double" />
+    </node>
+
+    <node pkg="mission_planner" name="super_drone_mission" type="super_drone_mission" output="screen">
+        <param name="config_name" value="$(arg mission_config_name)" type="string" />
+        <param name="data_path" value="$(arg waypoints_path)" type="string" />
+    </node>
+
+    <node pkg="mission_planner" name="nationals_sim_validator"
+          type="nationals_sim_validator.py" output="screen">
+        <param name="waypoints_path" value="$(arg waypoints_path)" type="string" />
+        <param name="validation_timeout" value="$(arg validation_timeout)" type="double" />
+    </node>
+</launch>

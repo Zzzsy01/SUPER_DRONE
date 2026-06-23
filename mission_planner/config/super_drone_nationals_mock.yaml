@@ -1,0 +1,12 @@
+goal_pub_topic: "/planning/click_goal"
+odom_topic: "/Odom_high_freq"
+start_trigger_topic: "/traj_start_trigger"
+land_topic: "/nationals_mock/takeoff_land_disabled"
+
+# Timed start after program launch. This mock-stage config deliberately avoids
+# advertising /px4ctrl/takeoff_land.
+start_trigger_type: 2
+start_program_delay: 3.0
+landing_trigger_delay: 9999.0
+odom_timeout: 0.5
+publish_dt: 0.2
