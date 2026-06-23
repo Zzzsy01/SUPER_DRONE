@@ -91,7 +91,11 @@ Visualization Manager:
       Marker Topic: /nationals/waypoints
       Name: nationals_waypoints
       Namespaces:
-        {}
+        nationals_field_boundary: true
+        nationals_waypoint_labels: true
+        nationals_waypoint_path: true
+        nationals_waypoint_points: true
+        nationals_waypoint_switch_dis: true
       Queue Size: 100
       Value: true
     - Class: rviz/Marker

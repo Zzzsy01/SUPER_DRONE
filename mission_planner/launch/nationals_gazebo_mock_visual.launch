@@ -16,7 +16,7 @@
     </include>
 
     <node pkg="gazebo_ros" name="spawn_super_mock_drone" type="spawn_model"
-          args="-sdf -file $(find mission_planner)/models/super_mock_drone/model.sdf -model super_mock_drone -x 0.0 -y 0.0 -z 1.0"
+          args="-sdf -file $(find mission_planner)/models/super_mock_drone/model.sdf -model super_mock_drone -x 3.0 -y 1.0 -z 1.0"
           output="screen" />
 
     <include file="$(find mission_planner)/launch/nationals_super_mock.launch">
@@ -36,6 +36,7 @@
     <node pkg="mission_planner" name="nationals_waypoint_marker"
           type="nationals_waypoint_marker.py" output="screen">
         <param name="waypoints_path" value="$(arg waypoints_path)" type="string" />
+        <param name="layout_path" value="$(arg layout_path)" type="string" />
         <param name="frame_id" value="world" type="string" />
     </node>
 

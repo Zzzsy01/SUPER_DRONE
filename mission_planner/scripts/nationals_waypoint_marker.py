@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import json
 from typing import List, Tuple
 
 import rospy
@@ -9,6 +10,7 @@ from visualization_msgs.msg import Marker, MarkerArray
 
 
 Waypoint = Tuple[float, float, float, float]
+Bounds = Tuple[float, float, float, float]
 
 
 def load_waypoints(path: str) -> List[Waypoint]:
@@ -23,6 +25,18 @@ def load_waypoints(path: str) -> List[Waypoint]:
                 raise RuntimeError(f"invalid waypoint line: {line.rstrip()}")
             waypoints.append(tuple(float(v) for v in parts))
     return waypoints
+
+
+def load_bounds(path: str) -> Bounds:
+    with open(os.path.expanduser(path), "r", encoding="utf-8") as handle:
+        layout = json.load(handle)
+    field = layout.get("field", {})
+    size = field.get("size_m", {}) if isinstance(field, dict) else {}
+    if isinstance(size, dict) and isinstance(size.get("x"), (int, float)) and isinstance(size.get("y"), (int, float)):
+        return 0.0, float(size["x"]), 0.0, float(size["y"])
+    if isinstance(size, (list, tuple)) and len(size) >= 2 and all(isinstance(v, (int, float)) for v in size[:2]):
+        return 0.0, float(size[0]), 0.0, float(size[1])
+    return 0.0, 8.0, 0.0, 12.0
 
 
 def color(r: float, g: float, b: float, a: float) -> ColorRGBA:
@@ -45,9 +59,11 @@ def point(x: float, y: float, z: float) -> Point:
 class NationalsWaypointMarker:
     def __init__(self) -> None:
         self.path = rospy.get_param("~waypoints_path", "")
+        self.layout_path = rospy.get_param("~layout_path", "")
         self.frame_id = rospy.get_param("~frame_id", "world")
         self.publish_rate = float(rospy.get_param("~publish_rate", 1.0))
         self.waypoints = load_waypoints(self.path)
+        self.bounds = load_bounds(self.layout_path) if self.layout_path else (0.0, 8.0, 0.0, 12.0)
         self.pub = rospy.Publisher("/nationals/waypoints", MarkerArray, queue_size=1, latch=True)
         self.timer = rospy.Timer(rospy.Duration(1.0 / self.publish_rate), self._timer_cb)
         rospy.loginfo("[nationals_waypoint_marker] loaded %d waypoints from %s", len(self.waypoints), self.path)
@@ -71,6 +87,14 @@ class NationalsWaypointMarker:
         for x, y, z, _switch_dis in self.waypoints:
             line.points.append(point(x, y, z))
         arr.markers.append(line)
+
+        xmin, xmax, ymin, ymax = self.bounds
+        boundary = self._base_marker(0, Marker.LINE_STRIP, "nationals_field_boundary")
+        boundary.scale.x = 0.07
+        boundary.color = color(1.0, 0.15, 0.05, 0.95)
+        for x, y in ((xmin, ymin), (xmax, ymin), (xmax, ymax), (xmin, ymax), (xmin, ymin)):
+            boundary.points.append(point(x, y, 0.05))
+        arr.markers.append(boundary)
 
         for i, (x, y, z, switch_dis) in enumerate(self.waypoints):
             sphere = self._base_marker(i, Marker.SPHERE, "nationals_waypoint_points")

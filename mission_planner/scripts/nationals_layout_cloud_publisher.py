@@ -2,7 +2,7 @@
 import json
 import math
 import os
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import rospy
 import sensor_msgs.point_cloud2 as pc2
@@ -11,6 +11,7 @@ from std_msgs.msg import Header
 
 
 Point = Tuple[float, float, float]
+Bounds = Tuple[float, float, float, float]
 
 
 def _numbers(value: Any) -> Optional[List[float]]:
@@ -67,6 +68,61 @@ def _add_box(points: List[Point], center: Sequence[float], size: Sequence[float]
         for z in zs:
             points.append((cx - sx * 0.5, y, z))
             points.append((cx + sx * 0.5, y, z))
+
+
+def _field_bounds(layout: Dict[str, Any]) -> Bounds:
+    field = layout.get("field", {})
+    size = field.get("size_m", {}) if isinstance(field, dict) else {}
+    if isinstance(size, dict) and isinstance(size.get("x"), (int, float)) and isinstance(size.get("y"), (int, float)):
+        return 0.0, float(size["x"]), 0.0, float(size["y"])
+    if isinstance(size, (list, tuple)) and len(size) >= 2 and all(isinstance(v, (int, float)) for v in size[:2]):
+        return 0.0, float(size[0]), 0.0, float(size[1])
+
+    xs: List[float] = []
+    ys: List[float] = []
+
+    def collect(value: Any) -> None:
+        if isinstance(value, dict):
+            center = _first_vec(value, ("center_m", "center", "position_m", "position", "pose_m", "initial_pose_m", "xyz"))
+            if center is not None:
+                xs.append(center[0])
+                ys.append(center[1])
+            bounds = value.get("bounds_m")
+            if isinstance(bounds, dict):
+                for key in ("xmin", "xmax"):
+                    if isinstance(bounds.get(key), (int, float)):
+                        xs.append(float(bounds[key]))
+                for key in ("ymin", "ymax"):
+                    if isinstance(bounds.get(key), (int, float)):
+                        ys.append(float(bounds[key]))
+            for child in value.values():
+                collect(child)
+        elif isinstance(value, list):
+            for child in value:
+                collect(child)
+
+    collect(layout)
+    if xs and ys:
+        return min(0.0, min(xs)), max(xs), min(0.0, min(ys)), max(ys)
+    return 0.0, 8.0, 0.0, 12.0
+
+
+def _add_boundary_walls(points: List[Point], bounds: Bounds, height: float, thickness: float,
+                        resolution: float, inset: float) -> None:
+    xmin, xmax, ymin, ymax = bounds
+    xmin += inset
+    xmax -= inset
+    ymin += inset
+    ymax -= inset
+    cx = (xmin + xmax) * 0.5
+    cy = (ymin + ymax) * 0.5
+    sx = xmax - xmin
+    sy = ymax - ymin
+    zc = height * 0.5
+    _add_box(points, (xmin - thickness * 0.5, cy, zc), (thickness, sy + 2.0 * thickness, height), resolution)
+    _add_box(points, (xmax + thickness * 0.5, cy, zc), (thickness, sy + 2.0 * thickness, height), resolution)
+    _add_box(points, (cx, ymin - thickness * 0.5, zc), (sx, thickness, height), resolution)
+    _add_box(points, (cx, ymax + thickness * 0.5, zc), (sx, thickness, height), resolution)
 
 
 def _add_cylinder(points: List[Point], center: Sequence[float], radius: float, height: float, resolution: float) -> None:
@@ -130,7 +186,7 @@ def _object_points(name: str, obj: Dict[str, Any], resolution: float) -> List[Po
         half_total = total_width * 0.5
         side_x = -half_total + pillar_width * 0.5
         right_x = half_total - pillar_width * 0.5
-        for dx in (side_x, 0.0, right_x):
+        for dx in (side_x, right_x):
             _add_box(points, (center[0] + dx, center[1], pillar_z), (pillar_width, depth, opening_height), resolution)
         _add_box(points, (center[0], center[1], top_z), (total_width, depth, top_thickness), resolution)
     elif "ring" in lname:
@@ -149,6 +205,9 @@ def _object_points(name: str, obj: Dict[str, Any], resolution: float) -> List[Po
 
 
 def _walk_layout(value: Any, path: str, resolution: float, out: List[Point]) -> None:
+    lower_path = path.lower()
+    if "takeoff_zone" in lower_path or "landing_zone" in lower_path:
+        return
     if isinstance(value, dict):
         out.extend(_object_points(path, value, resolution))
         for key, child in value.items():
@@ -158,11 +217,17 @@ def _walk_layout(value: Any, path: str, resolution: float, out: List[Point]) -> 
             _walk_layout(child, f"{path}[{i}]", resolution, out)
 
 
-def load_points(layout_path: str, resolution: float) -> List[Point]:
+def load_points(layout_path: str, resolution: float, include_boundary_walls: bool,
+                boundary_height: float, boundary_resolution: float,
+                boundary_thickness: float, boundary_inset: float) -> List[Point]:
     with open(os.path.expanduser(layout_path), "r", encoding="utf-8") as f:
         layout = json.load(f)
     points: List[Point] = []
     _walk_layout(layout, "layout", max(0.03, resolution), points)
+    bounds = _field_bounds(layout)
+    if include_boundary_walls:
+        _add_boundary_walls(points, bounds, boundary_height, boundary_thickness,
+                            max(0.03, boundary_resolution), boundary_inset)
     dedup = {}
     q = max(0.02, resolution * 0.5)
     for x, y, z in points:
@@ -177,7 +242,13 @@ def main() -> None:
     frame_id = rospy.get_param("~frame_id", "world")
     publish_rate = float(rospy.get_param("~publish_rate", 5.0))
     point_resolution = float(rospy.get_param("~point_resolution", 0.10))
-    points = load_points(layout_path, point_resolution)
+    include_boundary_walls = bool(rospy.get_param("~include_boundary_walls", True))
+    boundary_height = float(rospy.get_param("~boundary_height", 3.2))
+    boundary_resolution = float(rospy.get_param("~boundary_resolution", point_resolution))
+    boundary_thickness = float(rospy.get_param("~boundary_thickness", 0.10))
+    boundary_inset = float(rospy.get_param("~boundary_inset", 0.35))
+    points = load_points(layout_path, point_resolution, include_boundary_walls,
+                         boundary_height, boundary_resolution, boundary_thickness, boundary_inset)
     if not points:
         raise RuntimeError(f"no points generated from layout: {layout_path}")
     pub = rospy.Publisher("/cloud_registered", PointCloud2, queue_size=2)

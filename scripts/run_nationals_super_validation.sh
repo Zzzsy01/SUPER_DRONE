@@ -68,8 +68,11 @@ source "${WORKSPACE}/devel/setup.bash"
 if ! python3 "${REPO}/mission_planner/scripts/generate_nationals_waypoints.py" \
     --layout "${LAYOUT_PATH}" \
     --output "${WAYPOINTS}" \
-    --switch-dis "${VALIDATION_SWITCH_DIS:-0.65}" \
-    --final-switch-dis "${VALIDATION_FINAL_SWITCH_DIS:-0.45}" 2>&1 | tee -a "${LOG_FILE}"; then
+    --z "${VALIDATION_Z:-1.10}" \
+    --landing-z "${VALIDATION_LANDING_Z:-1.00}" \
+    --switch-dis "${VALIDATION_SWITCH_DIS:-0.90}" \
+    --final-switch-dis "${VALIDATION_FINAL_SWITCH_DIS:-0.60}" \
+    --field-margin "${VALIDATION_FIELD_MARGIN:-1.50}" 2>&1 | tee -a "${LOG_FILE}"; then
     echo "FAIL: generate_nationals_waypoints.py failed"
     exit 1
 fi

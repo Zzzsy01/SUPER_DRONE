@@ -18,6 +18,19 @@ This means `/cloud_registered` is not coming from a real Gazebo lidar in this
 stage. The node publishes `sensor_msgs/PointCloud2` at a configurable frame,
 rate, and point density.
 
+The layout cloud publisher also adds four boundary wall point clouds from the
+layout field size. For the seed 2026 nationals field this is `x=[0,8]` and
+`y=[0,12]`, with wall points covering the low-altitude flight volume so SUPER
+does not treat outside-field space as free.
+
+In the mock stage the regular layout obstacle cloud is intentionally coarser
+than the boundary wall cloud. The boundary wall remains dense, while interior
+obstacles are sampled sparsely enough for the current SUPER configuration to
+complete the software-loop route. The double-arch wall is represented by the two
+outer pillars and top beam, leaving the center passage available for mock
+planning. This is a validation-side approximation and not a PX4/Gazebo lidar
+model.
+
 ## Waypoints
 
 Generate the mission file from the layout:
@@ -40,7 +53,13 @@ pre-landing hover point.
 
 The validation script regenerates `mission_planner/data/nationals_seed_2026.txt`
 with a switch radius wide enough for SUPER's feasible through-ring target, which
-may settle slightly offset from the exact ring center.
+may settle slightly offset from the exact ring center. It also uses a 1.5 m
+field margin so rings or landing hover points near the field edge are shifted
+toward the field center before validation.
+
+The validator records all `/Odom_high_freq` samples and fails the run if any
+sample leaves the field bounds. Its report includes `in_bounds`, min/max x/y,
+and the first out-of-bounds time and position.
 
 ## One-command Validation
 
@@ -78,6 +97,9 @@ visual-only `super_mock_drone` model whose pose is synchronized from
 
 SUPER still plans from the layout-derived `/cloud_registered`; the point cloud is
 not produced by a Gazebo lidar in this stage.
+
+RViz displays the same field boundary as `/nationals/waypoints` marker namespace
+`nationals_field_boundary`.
 
 The visualization script writes a temporary waypoint file under `/tmp` with a
 slightly wider switch radius so the mock mission continues through the visual

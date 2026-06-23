@@ -55,8 +55,11 @@ source "${WORKSPACE}/devel/setup.bash"
 python3 "${REPO}/mission_planner/scripts/generate_nationals_waypoints.py" \
     --layout "${LAYOUT_PATH}" \
     --output "${WAYPOINTS}" \
-    --switch-dis 0.65 \
-    --final-switch-dis 0.45 || exit 1
+    --z "${NATIONALS_MOCK_Z:-1.10}" \
+    --landing-z "${NATIONALS_MOCK_LANDING_Z:-1.00}" \
+    --switch-dis 0.90 \
+    --final-switch-dis 0.60 \
+    --field-margin 1.50 || exit 1
 
 echo "[nationals_gazebo_mock] world: ${WORLD_PATH}"
 echo "[nationals_gazebo_mock] layout: ${LAYOUT_PATH}"
