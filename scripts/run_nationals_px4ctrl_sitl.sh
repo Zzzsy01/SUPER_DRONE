@@ -43,26 +43,32 @@ if grep -Eq '<arg[[:space:]][^>]*name="no_RC"|<arg[[:space:]][^>]*name='\''no_RC
     cat > "${TMP_LAUNCH}" <<'EOF'
 <launch>
     <arg name="no_RC" default="true" />
+    <arg name="takeoff_height" default="$(env SITL_TAKEOFF_HEIGHT)" />
     <param name="/px4ctrl/no_RC" value="true" type="bool" />
     <param name="/no_RC" value="true" type="bool" />
     <include file="$(find px4ctrl)/launch/run_ctrl.launch">
         <arg name="no_RC" value="$(arg no_RC)" />
     </include>
     <param name="/px4ctrl/auto_takeoff_land/no_RC" value="true" type="bool" />
+    <param name="/px4ctrl/auto_takeoff_land/takeoff_height" value="$(arg takeoff_height)" type="double" />
 </launch>
 EOF
 else
     cat > "${TMP_LAUNCH}" <<'EOF'
 <launch>
+    <arg name="takeoff_height" default="$(env SITL_TAKEOFF_HEIGHT)" />
     <param name="/px4ctrl/no_RC" value="true" type="bool" />
     <param name="/no_RC" value="true" type="bool" />
     <include file="$(find px4ctrl)/launch/run_ctrl.launch" />
     <param name="/px4ctrl/auto_takeoff_land/no_RC" value="true" type="bool" />
+    <param name="/px4ctrl/auto_takeoff_land/takeoff_height" value="$(arg takeoff_height)" type="double" />
 </launch>
 EOF
     echo "WARN: run_ctrl.launch does not declare a no_RC arg; setting SITL no_RC ROS params only." >&2
 fi
 
+export SITL_TAKEOFF_HEIGHT="${SITL_TAKEOFF_HEIGHT:-1.0}"
 echo "[nationals_px4ctrl_sitl] starting px4ctrl for PX4 SITL with no_RC=true"
+echo "[nationals_px4ctrl_sitl] SITL takeoff_height=${SITL_TAKEOFF_HEIGHT}"
 echo "[nationals_px4ctrl_sitl] SITL only: this script does not arm, take off, land, or target real hardware"
 exec roslaunch "${TMP_LAUNCH}"

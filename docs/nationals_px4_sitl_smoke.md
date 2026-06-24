@@ -167,3 +167,34 @@ Expected smoke-test signals:
 - `rosmsg show quadrotor_msgs/PositionCommand` works.
 
 This is only a control-chain smoke test. It must not be used for real hardware, and it must not be treated as proof that the full nationals mission can pass rings or land.
+
+## PX4 SITL Hover Smoke
+
+After the topic chain smoke test passes, the next SITL-only check may arm and briefly hover in PX4 SITL. Do not run this on real hardware.
+
+Start PX4 SITL, MAVROS, and px4ctrl SITL first:
+
+```bash
+cd ~/super_ws/src/SUPER_DRONE
+PX4_DIR=${HOME}/PX4-Autopilot ./scripts/run_nationals_px4_sitl_world.sh
+./scripts/run_nationals_mavros.sh
+SITL_TAKEOFF_HEIGHT=1.0 ./scripts/run_nationals_px4ctrl_sitl.sh
+```
+
+Then run the hover smoke in another terminal:
+
+```bash
+cd ~/super_ws/src/SUPER_DRONE
+./scripts/run_nationals_px4_sitl_hover_smoke.sh
+```
+
+The hover smoke:
+
+- Requires `/mavros/state connected=True`.
+- Waits for `/mavros/setpoint_raw/attitude` setpoints before requesting takeoff.
+- Uses px4ctrl's SITL takeoff path to enter OFFBOARD and arm.
+- Targets about `1.0m`, hovers for about `8s`, then sends a LAND command and disarms if needed.
+- Records `/mavros/state`, `/mavros/local_position/odom`, `/position_cmd`, and `/mavros/setpoint_raw/attitude` to `logs/nationals_px4_sitl_hover_smoke_*.bag`.
+- Stops on stale odom, MAVROS disconnect, missing attitude setpoints, excessive altitude, or excessive drift.
+
+This is still only a hover smoke test. It is not a full ring traversal and must not be used for a real aircraft.
