@@ -1,0 +1,3 @@
+Realflight modules are integrated as source but are not auto-discovered from this aggregate directory.
+Use explicit workspace links for packages that should build, such as:
+  ~/super_ws/src/px4ctrl -> ~/super_ws/src/SUPER_DRONE/realflight_modules/px4ctrl

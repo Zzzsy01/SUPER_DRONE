@@ -1,0 +1,4 @@
+Utility packages are integrated as source but are not auto-discovered from this aggregate directory.
+Use explicit workspace links for packages that should build, such as:
+  ~/super_ws/src/uav_utils -> ~/super_ws/src/SUPER_DRONE/utils/uav_utils
+  ~/super_ws/src/cmake_utils -> ~/super_ws/src/SUPER_DRONE/utils/cmake_utils

@@ -19,6 +19,13 @@ PX4_STATUS="missing"
 GEOGRAPHICLIB_STATUS="missing"
 NATIONALS_SIM_STATUS="missing"
 PX4CTRL_STATUS="missing"
+UAV_UTILS_STATUS="missing"
+CMAKE_UTILS_STATUS="missing"
+REALFLIGHT_MODULES_STATUS="missing"
+FAST_LIO_STATUS="missing"
+LIVOX_ROS_DRIVER_STATUS="missing"
+LIVOX_ROS_DRIVER2_STATUS="missing"
+REALSENSE_STATUS="missing"
 CATKIN_STATUS="not run"
 
 fail() {
@@ -74,6 +81,22 @@ link_package() {
 
     ln -s "${source_dir}" "${dest_dir}"
     ok "linked ${package_name}: ${dest_dir} -> ${source_dir}"
+}
+
+module_status() {
+    local module_name="$1"
+    local module_dir="$2"
+    if [ ! -d "${module_dir}" ]; then
+        echo "missing"
+    elif [ -e "${module_dir}/CATKIN_IGNORE" ]; then
+        echo "present CATKIN_IGNORE"
+    elif [ -n "${REALFLIGHT_MODULES_DIR:-}" ] && [ "${module_dir#"${REALFLIGHT_MODULES_DIR}/"}" != "${module_dir}" ] && [ -e "${REALFLIGHT_MODULES_DIR}/CATKIN_IGNORE" ]; then
+        echo "present ancestor_CATKIN_IGNORE"
+    elif [ -n "${UTILS_DIR:-}" ] && [ "${module_dir#"${UTILS_DIR}/"}" != "${module_dir}" ] && [ -e "${UTILS_DIR}/CATKIN_IGNORE" ]; then
+        echo "present ancestor_CATKIN_IGNORE"
+    else
+        echo "present"
+    fi
 }
 
 find_px4_dir() {
@@ -169,6 +192,34 @@ else
     fail "px4ctrl not found. Expected one of: ${SUPER_DRONE_DIR}/realflight_modules/px4ctrl, ${HOME}/ws/SUPER_DRONE/realflight_modules/px4ctrl, ${HOME}/REAL_DRONE_400/src/px4ctrl."
 fi
 
+UAV_UTILS_SRC="${SUPER_DRONE_DIR}/utils/uav_utils"
+UTILS_DIR="${SUPER_DRONE_DIR}/utils"
+if link_package "uav_utils" "${UAV_UTILS_SRC}"; then
+    UAV_UTILS_STATUS="OK"
+fi
+
+CMAKE_UTILS_SRC="${SUPER_DRONE_DIR}/utils/cmake_utils"
+if link_package "cmake_utils" "${CMAKE_UTILS_SRC}"; then
+    CMAKE_UTILS_STATUS="OK"
+fi
+
+REALFLIGHT_MODULES_DIR="${SUPER_DRONE_DIR}/realflight_modules"
+if [ -d "${REALFLIGHT_MODULES_DIR}" ]; then
+    REALFLIGHT_MODULES_STATUS="$(module_status "realflight_modules" "${REALFLIGHT_MODULES_DIR}")"
+    ok "realflight_modules ${REALFLIGHT_MODULES_STATUS}: ${REALFLIGHT_MODULES_DIR}"
+else
+    fail "realflight_modules not found: ${REALFLIGHT_MODULES_DIR}"
+fi
+
+FAST_LIO_STATUS="$(module_status "FAST_LIO" "${REALFLIGHT_MODULES_DIR}/mid360_fastlio/FAST_LIO")"
+LIVOX_ROS_DRIVER_STATUS="$(module_status "livox_ros_driver" "${REALFLIGHT_MODULES_DIR}/mid360_fastlio/livox_ros_driver")"
+LIVOX_ROS_DRIVER2_STATUS="$(module_status "livox_ros_driver2" "${REALFLIGHT_MODULES_DIR}/mid360_fastlio/livox_ros_driver2")"
+REALSENSE_STATUS="$(module_status "realsense-ros" "${REALFLIGHT_MODULES_DIR}/realsense-ros")"
+echo "INFO: FAST_LIO=${FAST_LIO_STATUS}"
+echo "INFO: livox_ros_driver=${LIVOX_ROS_DRIVER_STATUS}"
+echo "INFO: livox_ros_driver2=${LIVOX_ROS_DRIVER2_STATUS}"
+echo "INFO: realsense-ros=${REALSENSE_STATUS}"
+
 if [ ! -f "${LAYOUT_PATH}" ] || [ ! -f "${WORLD_PATH}" ]; then
     if [ -f "${GENERATOR}" ]; then
         echo "[preflight] generating nationals world/layout seed ${SEED}"
@@ -205,7 +256,7 @@ fi
 
 echo
 echo "[preflight] rospack checks"
-for package in nationals_sim px4ctrl mission_planner super_planner quadrotor_msgs; do
+for package in nationals_sim px4ctrl uav_utils cmake_utils mission_planner super_planner quadrotor_msgs; do
     if rospack find "${package}" >/dev/null 2>&1; then
         echo "OK: rospack find ${package} -> $(rospack find "${package}")"
     else
@@ -223,9 +274,16 @@ echo "PX4_DIR=${PX4_DIR:-missing}"
 echo "GeographicLib=${GEOGRAPHICLIB_STATUS}"
 echo "nationals_sim=${NATIONALS_SIM_STATUS}"
 echo "px4ctrl=${PX4CTRL_STATUS}"
+echo "uav_utils=${UAV_UTILS_STATUS}"
+echo "cmake_utils=${CMAKE_UTILS_STATUS}"
+echo "realflight_modules=${REALFLIGHT_MODULES_STATUS}"
+echo "FAST_LIO=${FAST_LIO_STATUS}"
+echo "livox_ros_driver=${LIVOX_ROS_DRIVER_STATUS}"
+echo "livox_ros_driver2=${LIVOX_ROS_DRIVER2_STATUS}"
+echo "realsense-ros=${REALSENSE_STATUS}"
 echo "catkin_make=${CATKIN_STATUS}"
 echo
-echo "[preflight] next steps"
+echo "[preflight] next steps after all checks pass"
 echo "  1. ./scripts/run_nationals_px4_sitl_world.sh"
 echo "  2. ./scripts/run_nationals_mavros.sh"
 echo "  3. roslaunch nationals_sim nationals_nodes.launch layout_file:=${LAYOUT_PATH} start_mission_driver:=false"

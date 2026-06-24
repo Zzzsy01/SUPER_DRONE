@@ -1,0 +1,23 @@
+<launch>
+    <arg name="planner_config_name" value="super_drone_ros1.yaml" />
+    <arg name="mission_config_name" value="super_drone_waypoint.yaml" />
+    <arg name="mission_data_name" value="super_drone_competition_template.txt" />
+    <arg name="fastlio_rviz" default="false" />
+    <arg name="livox_publish_freq" default="10.0" />
+
+    <include file="$(find livox_ros_driver2)/launch/msg_MID360.launch">
+        <arg name="publish_freq" value="$(arg livox_publish_freq)" />
+    </include>
+
+    <include file="$(find fast_lio)/launch/mapping_mid360.launch">
+        <arg name="rviz" value="$(arg fastlio_rviz)" />
+    </include>
+
+    <include file="$(find px4ctrl)/launch/run_ctrl.launch" />
+
+    <include file="$(find mission_planner)/launch/super_drone.launch">
+        <arg name="planner_config_name" value="$(arg planner_config_name)" />
+        <arg name="mission_config_name" value="$(arg mission_config_name)" />
+        <arg name="mission_data_name" value="$(arg mission_data_name)" />
+    </include>
+</launch>
