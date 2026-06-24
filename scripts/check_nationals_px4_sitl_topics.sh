@@ -2,8 +2,34 @@
 set -u
 set -o pipefail
 
+SUPER_WS="${SUPER_WS:-${HOME}/super_ws}"
 FAIL=0
 HZ_TIMEOUT="${HZ_TIMEOUT:-6}"
+export ROS_HOME="${ROS_HOME:-/tmp/super_drone_ros_home}"
+mkdir -p "${ROS_HOME}"
+
+if [ ! -f /opt/ros/noetic/setup.bash ]; then
+    echo "FAIL: /opt/ros/noetic/setup.bash not found"
+    exit 1
+fi
+if [ ! -f "${SUPER_WS}/devel/setup.bash" ]; then
+    echo "FAIL: ${SUPER_WS}/devel/setup.bash not found. Run ./scripts/preflight_nationals_px4_sitl_env.sh first."
+    exit 1
+fi
+
+# shellcheck disable=SC1091
+set +u
+source /opt/ros/noetic/setup.bash
+# shellcheck disable=SC1091
+source "${SUPER_WS}/devel/setup.bash"
+set -u
+
+for package in nationals_sim px4ctrl mission_planner super_planner quadrotor_msgs; do
+    if ! rospack find "${package}" >/dev/null 2>&1; then
+        echo "FAIL: ROS package ${package} is not found. Run ./scripts/preflight_nationals_px4_sitl_env.sh first."
+        exit 1
+    fi
+done
 
 topic_exists() {
     rostopic list 2>/dev/null | grep -qx "$1"
@@ -83,6 +109,7 @@ else
 fi
 
 echo "INFO: real Mid-360S, real FAST-LIO, and real flight controller are intentionally not required."
+echo "INFO: SITL only. This checker does not arm, take off, land, or target real hardware."
 
 if [ "${FAIL}" -eq 0 ]; then
     echo "PASS: nationals PX4 SITL smoke topics look connected"

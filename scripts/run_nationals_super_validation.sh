@@ -10,14 +10,16 @@ TIMEOUT_SEC="${TIMEOUT_SEC:-180}"
 ROS_PORT="${ROS_PORT:-11324}"
 export ROS_MASTER_URI="http://127.0.0.1:${ROS_PORT}"
 export ROS_IP="${ROS_IP:-127.0.0.1}"
+export ROS_HOSTNAME="${ROS_HOSTNAME:-127.0.0.1}"
 export ROS_LOG_DIR="${ROS_LOG_DIR:-/tmp/super_drone_roslog}"
-unset ROS_HOSTNAME
+export ROS_HOME="${ROS_HOME:-/tmp/super_drone_ros_home}"
+export GAZEBO_MASTER_URI="${GAZEBO_MASTER_URI:-http://127.0.0.1:11346}"
 STAMP="$(date +%Y%m%d_%H%M%S)"
 LOG_DIR="${REPO}/logs"
 LOG_FILE="${LOG_DIR}/nationals_super_${STAMP}.log"
 WAYPOINTS="${REPO}/mission_planner/data/nationals_seed_${SEED}.txt"
 
-mkdir -p "${LOG_DIR}" "${ROS_LOG_DIR}"
+mkdir -p "${LOG_DIR}" "${ROS_LOG_DIR}" "${ROS_HOME}"
 echo "[nationals_super] log: ${LOG_FILE}"
 
 find_layout() {
@@ -77,7 +79,7 @@ if ! python3 "${REPO}/mission_planner/scripts/generate_nationals_waypoints.py" \
     exit 1
 fi
 
-setsid bash -c "source '${WORKSPACE}/devel/setup.bash' && unset ROS_HOSTNAME && export ROS_MASTER_URI='${ROS_MASTER_URI}' ROS_IP='${ROS_IP}' ROS_LOG_DIR='${ROS_LOG_DIR}' && roslaunch mission_planner nationals_super_mock.launch layout_path:='${LAYOUT_PATH}' waypoints_path:='${WAYPOINTS}'" \
+setsid bash -c "source '${WORKSPACE}/devel/setup.bash' && export ROS_MASTER_URI='${ROS_MASTER_URI}' ROS_IP='${ROS_IP}' ROS_HOSTNAME='${ROS_HOSTNAME}' ROS_LOG_DIR='${ROS_LOG_DIR}' ROS_HOME='${ROS_HOME}' GAZEBO_MASTER_URI='${GAZEBO_MASTER_URI}' && roslaunch --local mission_planner nationals_super_mock.launch layout_path:='${LAYOUT_PATH}' waypoints_path:='${WAYPOINTS}'" \
     >> "${LOG_FILE}" 2>&1 &
 LAUNCH_PID=$!
 

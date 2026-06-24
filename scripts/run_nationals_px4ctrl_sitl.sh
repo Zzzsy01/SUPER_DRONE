@@ -1,17 +1,30 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-WORKSPACE="${WORKSPACE:-${HOME}/super_ws}"
+SUPER_WS="${SUPER_WS:-${WORKSPACE:-${HOME}/super_ws}}"
 TMP_LAUNCH="${TMPDIR:-/tmp}/nationals_px4ctrl_sitl_$$.launch"
+export ROS_HOME="${ROS_HOME:-/tmp/super_drone_ros_home}"
+mkdir -p "${ROS_HOME}"
 
-if [ -f "${WORKSPACE}/devel/setup.bash" ]; then
-    # shellcheck disable=SC1091
-    source "${WORKSPACE}/devel/setup.bash"
+if [ ! -f /opt/ros/noetic/setup.bash ]; then
+    echo "FAIL: /opt/ros/noetic/setup.bash not found" >&2
+    exit 1
 fi
+if [ ! -f "${SUPER_WS}/devel/setup.bash" ]; then
+    echo "FAIL: ${SUPER_WS}/devel/setup.bash not found. Run ./scripts/preflight_nationals_px4_sitl_env.sh first." >&2
+    exit 1
+fi
+
+# shellcheck disable=SC1091
+set +u
+source /opt/ros/noetic/setup.bash
+# shellcheck disable=SC1091
+source "${SUPER_WS}/devel/setup.bash"
+set -u
 
 PX4CTRL_DIR="$(rospack find px4ctrl 2>/dev/null || true)"
 if [ -z "${PX4CTRL_DIR}" ]; then
-    echo "FAIL: ROS package px4ctrl is not found. Source the workspace that contains px4ctrl first." >&2
+    echo "FAIL: ROS package px4ctrl is not found. Run ./scripts/preflight_nationals_px4_sitl_env.sh first." >&2
     exit 1
 fi
 

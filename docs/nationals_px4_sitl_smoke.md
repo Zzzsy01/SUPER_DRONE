@@ -4,6 +4,60 @@ This is a PX4 SITL smoke test, not a real-flight workflow. Do not use it on a re
 
 Do not expect a complete ring traversal in this stage. Do not modify SUPER A*, ROG-Map, trajectory optimization, or `quadrotor_msgs/PositionCommand.msg` for this smoke test.
 
+This workflow is SITL-only. Do not install propellers, do not use it on real hardware, and do not use these scripts for a real flight.
+
+## First Run: Environment Preflight
+
+Run the preflight before opening the multi-terminal smoke workflow:
+
+```bash
+cd ~/super_ws/src/SUPER_DRONE
+./scripts/preflight_nationals_px4_sitl_env.sh
+```
+
+The preflight uses:
+
+```bash
+SUPER_WS=${SUPER_WS:-$HOME/super_ws}
+SUPER_DRONE_DIR=${SUPER_DRONE_DIR:-$SUPER_WS/src/SUPER_DRONE}
+GEZOGO_DIR=${GEZOGO_DIR:-$HOME/ws/gezogo-guosai}
+```
+
+It checks PX4, GeographicLib, `nationals_sim`, `px4ctrl`, generated nationals world/layout files, and catkin package visibility.
+
+If PX4 is not found, install/build PX4 or run with an explicit path:
+
+```bash
+PX4_DIR=/path/to/PX4-Autopilot ./scripts/preflight_nationals_px4_sitl_env.sh
+PX4_DIR=/path/to/PX4-Autopilot ./scripts/run_nationals_px4_sitl_world.sh
+```
+
+If MAVROS reports a GeographicLib error for `egm96-5.pgm`, install the dataset:
+
+```bash
+sudo apt install geographiclib-tools
+sudo geographiclib-get-geoids egm96-5
+```
+
+or:
+
+```bash
+sudo /opt/ros/noetic/lib/mavros/install_geographiclib_datasets.sh
+```
+
+If `nationals_sim` or `px4ctrl` is not found, run the preflight again and check its summary. It will create safe symlinks into `~/super_ws/src` when the source packages are present; it will not overwrite an existing conflicting path.
+
+Type script names exactly as shown. Do not append Chinese punctuation such as `、` after `.sh`.
+
+After preflight passes, use this terminal order:
+
+1. `./scripts/run_nationals_px4_sitl_world.sh`
+2. `./scripts/run_nationals_mavros.sh`
+3. `roslaunch nationals_sim nationals_nodes.launch layout_file:=$HOME/ws/gezogo-guosai/gazebo_px4_nationals/generated/seed_2026/layout.json start_mission_driver:=false`
+4. `./scripts/run_nationals_super_sitl_smoke.sh`
+5. `./scripts/run_nationals_px4ctrl_sitl.sh`
+6. `./scripts/check_nationals_px4_sitl_topics.sh`
+
 ## Terminal A: PX4 SITL + Gazebo nationals world
 
 ```bash
@@ -20,10 +74,16 @@ This checks or generates:
 Then it exports `PX4_SITL_WORLD` and runs:
 
 ```bash
-make -C ~/PX4-Autopilot px4_sitl_default gazebo-classic_iris
+make -C "$PX4_DIR" px4_sitl_default gazebo-classic_iris
 ```
 
-It does not start SUPER, px4ctrl, MAVROS, arm, takeoff, land, or publish mission goals.
+It searches common PX4 locations and also supports:
+
+```bash
+PX4_DIR=/path/to/PX4-Autopilot ./scripts/run_nationals_px4_sitl_world.sh
+```
+
+It does not start SUPER, px4ctrl, MAVROS, arm, takeoff, land, target real hardware, or publish mission goals.
 
 ## Terminal B: MAVROS
 
@@ -40,11 +100,16 @@ roslaunch mavros px4.launch fcu_url:="udp://:14540@127.0.0.1:14557"
 
 Check that `/mavros/state` becomes `connected: True` before continuing.
 
+If it reports a GeographicLib exception for `egm96-5.pgm`, install the dataset as shown in the preflight section.
+
 ## Terminal C: nationals_sim nodes
 
-If the `nationals_sim` package from `~/ws/gezogo-guosai/gazebo_px4_nationals/nationals_sim` is linked into a sourced catkin workspace, start it with the mission driver disabled:
+After the preflight has linked `nationals_sim` into `~/super_ws/src` and rebuilt the workspace, start it with the mission driver disabled:
 
 ```bash
+cd ~/super_ws
+source /opt/ros/noetic/setup.bash
+source devel/setup.bash
 roslaunch nationals_sim nationals_nodes.launch \
   layout_file:=$HOME/ws/gezogo-guosai/gazebo_px4_nationals/generated/seed_2026/layout.json \
   start_mission_driver:=false
@@ -77,13 +142,11 @@ cd ~/super_ws/src/SUPER_DRONE
 
 The wrapper is SITL-only. It tries to pass `no_RC:=true` when `px4ctrl/run_ctrl.launch` declares that arg, and also sets temporary ROS params `/px4ctrl/no_RC=true` and `/no_RC=true`. It does not permanently edit px4ctrl configuration.
 
-Do not arm, take off, or land automatically from this workflow.
+Do not arm, take off, land, or target real hardware from this workflow.
 
 ## Terminal I: topic smoke check
 
 ```bash
-cd ~/super_ws
-source devel/setup.bash
 cd ~/super_ws/src/SUPER_DRONE
 ./scripts/check_nationals_px4_sitl_topics.sh
 ```
