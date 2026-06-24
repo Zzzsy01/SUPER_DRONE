@@ -61,8 +61,14 @@ python3 "${SUPER_DRONE_DIR}/mission_planner/scripts/generate_nationals_waypoints
 
 cd "${SUPER_WS}"
 
-echo "[nationals_super_sitl] starting relay, layout cloud, SUPER fsm_node, and mission planner"
+echo "[nationals_super_sitl] starting relay, layout cloud, SUPER fsm_node, and one safe /planning/click_goal smoke trigger"
 echo "[nationals_super_sitl] SITL only: this script does not start px4ctrl, arm, takeoff, land, or target real hardware"
 exec roslaunch mission_planner nationals_px4_sitl_smoke.launch \
     layout_path:="${LAYOUT_PATH}" \
-    waypoints_path:="${WAYPOINTS}"
+    waypoints_path:="${WAYPOINTS}" \
+    start_mission:="${SITL_START_MISSION:-false}" \
+    start_smoke_goal:="${SITL_START_SMOKE_GOAL:-true}" \
+    smoke_goal_x:="${SITL_SMOKE_GOAL_X:-3.000}" \
+    smoke_goal_y:="${SITL_SMOKE_GOAL_Y:-1.000}" \
+    smoke_goal_z:="${SITL_SMOKE_GOAL_Z:-1.000}" \
+    smoke_goal_delay:="${SITL_SMOKE_GOAL_DELAY:-8.0}"

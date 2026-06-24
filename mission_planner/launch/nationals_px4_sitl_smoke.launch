@@ -1,5 +1,5 @@
 <launch>
-    <arg name="planner_config_name" default="super_drone_ros1.yaml" />
+    <arg name="planner_config_name" default="super_drone_px4_sitl_smoke.yaml" />
     <arg name="mission_config_name" default="super_drone_nationals_mock.yaml" />
     <arg name="layout_path" default="$(env HOME)/ws/gezogo-guosai/gazebo_px4_nationals/generated/seed_2026/layout.json" />
     <arg name="waypoints_path" default="$(find mission_planner)/data/nationals_seed_2026.txt" />
@@ -10,7 +10,12 @@
     <arg name="start_relay" default="true" />
     <arg name="start_layout_cloud" default="true" />
     <arg name="start_super" default="true" />
-    <arg name="start_mission" default="true" />
+    <arg name="start_mission" default="false" />
+    <arg name="start_smoke_goal" default="true" />
+    <arg name="smoke_goal_delay" default="8.0" />
+    <arg name="smoke_goal_x" default="3.000" />
+    <arg name="smoke_goal_y" default="1.000" />
+    <arg name="smoke_goal_z" default="1.000" />
 
     <param name="/use_sim_time" value="false" />
 
@@ -33,5 +38,14 @@
     <node if="$(arg start_mission)" pkg="mission_planner" name="super_drone_mission" type="super_drone_mission" output="screen">
         <param name="config_name" value="$(arg mission_config_name)" type="string" />
         <param name="data_path" value="$(arg waypoints_path)" type="string" />
+    </node>
+
+    <node if="$(arg start_smoke_goal)" pkg="mission_planner" name="nationals_sitl_smoke_goal" type="goal_feeder" output="screen">
+        <param name="goal_topic" value="/planning/click_goal" type="string" />
+        <param name="frame_id" value="$(arg frame_id)" type="string" />
+        <param name="goal_delay" value="$(arg smoke_goal_delay)" type="double" />
+        <param name="goal_x" value="$(arg smoke_goal_x)" type="double" />
+        <param name="goal_y" value="$(arg smoke_goal_y)" type="double" />
+        <param name="goal_z" value="$(arg smoke_goal_z)" type="double" />
     </node>
 </launch>

@@ -47,9 +47,22 @@ check_exists() {
 
 check_hz() {
     local topic="$1"
+    local output
+    local rate
     echo "[check] rostopic hz ${topic}"
-    if timeout "${HZ_TIMEOUT}" rostopic hz "${topic}"; then
-        echo "OK: ${topic} has frequency"
+    output="$(timeout "${HZ_TIMEOUT}" rostopic hz "${topic}" 2>&1 || true)"
+    echo "${output}"
+    rate="$(echo "${output}" | awk '
+        /average rate:/ {
+            for (i = 1; i <= NF; i++) {
+                if ($i == "rate:") {
+                    print $(i + 1)
+                    exit
+                }
+            }
+        }')"
+    if [ -n "${rate}" ] && awk -v r="${rate}" 'BEGIN { exit !(r + 0 > 0) }'; then
+        echo "OK: ${topic} rate=${rate} Hz"
     else
         echo "FAIL: ${topic} has no measurable frequency"
         FAIL=1

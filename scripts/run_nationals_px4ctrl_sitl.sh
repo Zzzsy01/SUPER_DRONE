@@ -48,6 +48,7 @@ if grep -Eq '<arg[[:space:]][^>]*name="no_RC"|<arg[[:space:]][^>]*name='\''no_RC
     <include file="$(find px4ctrl)/launch/run_ctrl.launch">
         <arg name="no_RC" value="$(arg no_RC)" />
     </include>
+    <param name="/px4ctrl/auto_takeoff_land/no_RC" value="true" type="bool" />
 </launch>
 EOF
 else
@@ -56,9 +57,10 @@ else
     <param name="/px4ctrl/no_RC" value="true" type="bool" />
     <param name="/no_RC" value="true" type="bool" />
     <include file="$(find px4ctrl)/launch/run_ctrl.launch" />
+    <param name="/px4ctrl/auto_takeoff_land/no_RC" value="true" type="bool" />
 </launch>
 EOF
-    echo "WARN: run_ctrl.launch does not declare a no_RC arg; setting /px4ctrl/no_RC and /no_RC ROS params only." >&2
+    echo "WARN: run_ctrl.launch does not declare a no_RC arg; setting SITL no_RC ROS params only." >&2
 fi
 
 echo "[nationals_px4ctrl_sitl] starting px4ctrl for PX4 SITL with no_RC=true"

@@ -53,7 +53,7 @@ After preflight passes, use this terminal order:
 
 1. `./scripts/run_nationals_px4_sitl_world.sh`
 2. `./scripts/run_nationals_mavros.sh`
-3. `roslaunch nationals_sim nationals_nodes.launch layout_file:=$HOME/ws/gezogo-guosai/gazebo_px4_nationals/generated/seed_2026/layout.json start_mission_driver:=false`
+3. `roslaunch nationals_sim nationals_nodes.launch layout_file:=${HOME}/ws/gezogo-guosai/gazebo_px4_nationals/generated/seed_2026/layout.json start_mission_driver:=false`
 4. `./scripts/run_nationals_super_sitl_smoke.sh`
 5. `./scripts/run_nationals_px4ctrl_sitl.sh`
 6. `./scripts/check_nationals_px4_sitl_topics.sh`
@@ -111,13 +111,15 @@ cd ~/super_ws
 source /opt/ros/noetic/setup.bash
 source devel/setup.bash
 roslaunch nationals_sim nationals_nodes.launch \
-  layout_file:=$HOME/ws/gezogo-guosai/gazebo_px4_nationals/generated/seed_2026/layout.json \
+  layout_file:=${HOME}/ws/gezogo-guosai/gazebo_px4_nationals/generated/seed_2026/layout.json \
   start_mission_driver:=false
 ```
 
 Keeping `start_mission_driver:=false` avoids a second mission source while SUPER is being checked.
 
-## Terminal D-G: Relay, layout cloud, SUPER, mission planner
+Do not pass `layout_file:=~/ws/...` here. `~` is not expanded inside ROS launch argument values in every context; use `${HOME}` from the shell or an absolute path such as `/home/zsy/ws/...`.
+
+## Terminal D-G: Relay, layout cloud, SUPER, smoke goal
 
 ```bash
 cd ~/super_ws/src/SUPER_DRONE
@@ -129,7 +131,10 @@ This launch does the following:
 - Relays `/mavros/local_position/odom` to `/Odom_high_freq`.
 - Publishes `/cloud_registered` from `nationals_layout_cloud_publisher.py`.
 - Starts `super_planner` `fsm_node`.
-- Starts `super_drone_mission` using `mission_planner/data/nationals_seed_2026.txt`.
+- Uses the smoke-only planner config `super_drone_px4_sitl_smoke.yaml`, which keeps the virtual ground below PX4 SITL's disarmed ground odom.
+- Publishes one safe smoke-test `/planning/click_goal` above the layout takeoff zone in frame `world`.
+
+By default this smoke launch does not start the full `super_drone_mission` waypoint sequence. It only triggers SUPER planning enough to produce `/position_cmd`. To explicitly test the mission node later, run with `SITL_START_MISSION=true`, but do not use that for this minimal smoke check.
 
 If Gazebo does not provide a real `sensor_msgs/PointCloud2` lidar topic, keep using the layout cloud publisher. Real Mid-360S and FAST-LIO are not required for this smoke test.
 
