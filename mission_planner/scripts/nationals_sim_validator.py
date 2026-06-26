@@ -2,7 +2,10 @@
 import math
 import os
 import json
+import sys
 from typing import List, Tuple
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import rospy
 import rosgraph
@@ -11,21 +14,28 @@ from quadrotor_msgs.msg import PositionCommand
 from sensor_msgs.msg import PointCloud2
 from std_msgs.msg import String
 
+from nationals_frame_transform import parse_vec, transform_bounds
+
 
 Goal = Tuple[float, float, float, float]
 Bounds = Tuple[float, float, float, float]
 
 
-def field_bounds_from_layout(path: str) -> Bounds:
+def field_bounds_from_layout(path: str, transform_to_planning_frame: bool = True,
+                             frame_scale=(-1.0, 1.0, 1.0),
+                             frame_offset=(3.0, -1.0, 0.0)) -> Bounds:
     with open(os.path.expanduser(path), "r", encoding="utf-8") as f:
         layout = json.load(f)
     field = layout.get("field", {})
     size = field.get("size_m", {}) if isinstance(field, dict) else {}
     if isinstance(size, dict) and isinstance(size.get("x"), (int, float)) and isinstance(size.get("y"), (int, float)):
-        return 0.0, float(size["x"]), 0.0, float(size["y"])
+            bounds = (0.0, float(size["x"]), 0.0, float(size["y"]))
+            return transform_bounds(bounds, frame_scale, frame_offset) if transform_to_planning_frame else bounds
     if isinstance(size, (list, tuple)) and len(size) >= 2 and all(isinstance(v, (int, float)) for v in size[:2]):
-        return 0.0, float(size[0]), 0.0, float(size[1])
-    return 0.0, 8.0, 0.0, 12.0
+        bounds = (0.0, float(size[0]), 0.0, float(size[1]))
+        return transform_bounds(bounds, frame_scale, frame_offset) if transform_to_planning_frame else bounds
+    bounds = (0.0, 8.0, 0.0, 12.0)
+    return transform_bounds(bounds, frame_scale, frame_offset) if transform_to_planning_frame else bounds
 
 
 class NationalsSimValidator:
@@ -35,11 +45,19 @@ class NationalsSimValidator:
         self.waypoints_path = rospy.get_param("~waypoints_path", "")
         self.layout_path = rospy.get_param("~layout_path", "")
         self.bounds_margin = float(rospy.get_param("~bounds_margin", 0.0))
+        self.transform_to_planning_frame = bool(rospy.get_param("~transform_to_planning_frame", True))
+        self.frame_scale = parse_vec(str(rospy.get_param("~frame_scale", "-1,1,1")), (-1.0, 1.0, 1.0))
+        self.frame_offset = parse_vec(str(rospy.get_param("~frame_offset", "3,-1,0")), (3.0, -1.0, 0.0))
         self.min_cloud_rate = float(rospy.get_param("~min_cloud_rate", 2.0))
         self.min_odom_rate = float(rospy.get_param("~min_odom_rate", 50.0))
         self.min_cmd_rate = float(rospy.get_param("~min_cmd_rate", 20.0))
         self.goals = self._load_goals(self.waypoints_path)
-        self.bounds = field_bounds_from_layout(self.layout_path) if self.layout_path else (0.0, 8.0, 0.0, 12.0)
+        self.bounds = field_bounds_from_layout(
+            self.layout_path,
+            self.transform_to_planning_frame,
+            self.frame_scale,
+            self.frame_offset,
+        ) if self.layout_path else transform_bounds((0.0, 8.0, 0.0, 12.0), self.frame_scale, self.frame_offset)
         self.next_goal = 0
         self.start_time = rospy.Time.now()
         self.first_cloud = None

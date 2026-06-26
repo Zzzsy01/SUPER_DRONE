@@ -3,7 +3,12 @@ import argparse
 import json
 import math
 import os
+import sys
 from typing import Any, Dict, List, Optional, Sequence, Tuple
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from nationals_frame_transform import parse_vec, transform_bounds, transform_point
 
 
 Bounds = Tuple[float, float, float, float]
@@ -133,11 +138,16 @@ def main() -> None:
     parser.add_argument("--final-switch-dis", type=float, default=0.25)
     parser.add_argument("--landing-z", type=float, default=1.00)
     parser.add_argument("--field-margin", type=float, default=0.35)
+    parser.add_argument("--frame-scale", default=os.environ.get("SITL_FRAME_SCALE", "-1,1,1"))
+    parser.add_argument("--frame-offset", default=os.environ.get("SITL_FRAME_OFFSET", "3,-1,0"))
+    parser.add_argument("--no-transform", action="store_true")
     args = parser.parse_args()
 
     with open(os.path.expanduser(args.layout), "r", encoding="utf-8") as f:
         layout = json.load(f)
     bounds = _field_bounds(layout)
+    scale = parse_vec(args.frame_scale, (-1.0, 1.0, 1.0))
+    offset = parse_vec(args.frame_offset, (3.0, -1.0, 0.0))
 
     rings: List[List[float]] = []
     _collect_named(layout, "layout", ("scoring_rings", "scoring_ring", "score_ring", "ring"), rings)
@@ -158,15 +168,23 @@ def main() -> None:
         final[0] += 1.2
     final = _clamp_to_bounds(final, bounds, args.field_margin)
 
+    output_bounds = bounds if args.no_transform else transform_bounds(bounds, scale, offset)
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
     with open(os.path.abspath(args.output), "w", encoding="utf-8") as f:
         for i, p in enumerate(rings):
-            f.write(f"{p[0]:.3f} {p[1]:.3f} {args.z:.3f} {args.switch_dis:.3f}\n")
-            print(f"[generate_nationals_waypoints] waypoint {i}: ({p[0]:.3f}, {p[1]:.3f}, {args.z:.3f}) "
-                  f"in_bounds={'OK' if _in_bounds(p, bounds, args.field_margin) else 'FAIL'}")
-        f.write(f"{final[0]:.3f} {final[1]:.3f} {args.landing_z:.3f} {args.final_switch_dis:.3f}\n")
-        print(f"[generate_nationals_waypoints] waypoint 4: ({final[0]:.3f}, {final[1]:.3f}, {args.landing_z:.3f}) "
-              f"in_bounds={'OK' if _in_bounds(final, bounds, args.field_margin) else 'FAIL'}")
+            out_p = p if args.no_transform else list(transform_point((p[0], p[1], args.z), scale, offset))
+            out_p[2] = args.z
+            f.write(f"{out_p[0]:.3f} {out_p[1]:.3f} {out_p[2]:.3f} {args.switch_dis:.3f}\n")
+            print(f"[generate_nationals_waypoints] waypoint {i}: raw=({p[0]:.3f}, {p[1]:.3f}, {args.z:.3f}) "
+                  f"out=({out_p[0]:.3f}, {out_p[1]:.3f}, {out_p[2]:.3f}) "
+                  f"in_bounds={'OK' if _in_bounds(out_p, output_bounds, args.field_margin) else 'FAIL'}")
+        out_final = final if args.no_transform else list(transform_point((final[0], final[1], args.landing_z), scale, offset))
+        out_final[2] = args.landing_z
+        f.write(f"{out_final[0]:.3f} {out_final[1]:.3f} {out_final[2]:.3f} {args.final_switch_dis:.3f}\n")
+        print(f"[generate_nationals_waypoints] waypoint 4: raw=({final[0]:.3f}, {final[1]:.3f}, {args.landing_z:.3f}) "
+              f"out=({out_final[0]:.3f}, {out_final[1]:.3f}, {out_final[2]:.3f}) "
+              f"in_bounds={'OK' if _in_bounds(out_final, output_bounds, args.field_margin) else 'FAIL'}")
+    print(f"[generate_nationals_waypoints] transformed_bounds=({output_bounds[0]:.3f}, {output_bounds[1]:.3f}, {output_bounds[2]:.3f}, {output_bounds[3]:.3f})")
     print(f"[generate_nationals_waypoints] wrote {os.path.abspath(args.output)}")
 
 

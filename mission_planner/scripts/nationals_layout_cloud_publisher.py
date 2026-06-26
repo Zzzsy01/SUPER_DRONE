@@ -2,13 +2,17 @@
 import json
 import math
 import os
+import sys
 from typing import Any, Dict, List, Optional, Sequence, Tuple
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import rospy
 import sensor_msgs.point_cloud2 as pc2
 from sensor_msgs.msg import PointCloud2
 from std_msgs.msg import Header
 
+from nationals_frame_transform import parse_vec, transform_bounds, transform_points
 
 Point = Tuple[float, float, float]
 Bounds = Tuple[float, float, float, float]
@@ -219,7 +223,10 @@ def _walk_layout(value: Any, path: str, resolution: float, out: List[Point]) -> 
 
 def load_points(layout_path: str, resolution: float, include_boundary_walls: bool,
                 boundary_height: float, boundary_resolution: float,
-                boundary_thickness: float, boundary_inset: float) -> List[Point]:
+                boundary_thickness: float, boundary_inset: float,
+                transform_to_planning_frame: bool = True,
+                frame_scale: Point = (-1.0, 1.0, 1.0),
+                frame_offset: Point = (3.0, -1.0, 0.0)) -> List[Point]:
     with open(os.path.expanduser(layout_path), "r", encoding="utf-8") as f:
         layout = json.load(f)
     points: List[Point] = []
@@ -228,6 +235,9 @@ def load_points(layout_path: str, resolution: float, include_boundary_walls: boo
     if include_boundary_walls:
         _add_boundary_walls(points, bounds, boundary_height, boundary_thickness,
                             max(0.03, boundary_resolution), boundary_inset)
+    if transform_to_planning_frame:
+        points = list(transform_points(points, frame_scale, frame_offset))
+        bounds = transform_bounds(bounds, frame_scale, frame_offset)
     dedup = {}
     q = max(0.02, resolution * 0.5)
     for x, y, z in points:
@@ -247,13 +257,23 @@ def main() -> None:
     boundary_resolution = float(rospy.get_param("~boundary_resolution", point_resolution))
     boundary_thickness = float(rospy.get_param("~boundary_thickness", 0.10))
     boundary_inset = float(rospy.get_param("~boundary_inset", 0.35))
+    transform_to_planning_frame = bool(rospy.get_param("~transform_to_planning_frame", True))
+    frame_scale = parse_vec(str(rospy.get_param("~frame_scale", "-1,1,1")), (-1.0, 1.0, 1.0))
+    frame_offset = parse_vec(str(rospy.get_param("~frame_offset", "3,-1,0")), (3.0, -1.0, 0.0))
     points = load_points(layout_path, point_resolution, include_boundary_walls,
-                         boundary_height, boundary_resolution, boundary_thickness, boundary_inset)
+                         boundary_height, boundary_resolution, boundary_thickness, boundary_inset,
+                         transform_to_planning_frame, frame_scale, frame_offset)
     if not points:
         raise RuntimeError(f"no points generated from layout: {layout_path}")
     pub = rospy.Publisher("/cloud_registered", PointCloud2, queue_size=2)
     rate = rospy.Rate(publish_rate)
+    xs = [p[0] for p in points]
+    ys = [p[1] for p in points]
+    zs = [p[2] for p in points]
     rospy.loginfo("[nationals_layout_cloud_publisher] loaded %d points from %s", len(points), layout_path)
+    rospy.loginfo("[nationals_layout_cloud_publisher] transform_to_planning_frame=%s scale=%s offset=%s cloud_min=(%.3f, %.3f, %.3f) cloud_max=(%.3f, %.3f, %.3f)",
+                  transform_to_planning_frame, frame_scale, frame_offset,
+                  min(xs), min(ys), min(zs), max(xs), max(ys), max(zs))
     while not rospy.is_shutdown():
         header = Header(stamp=rospy.Time.now(), frame_id=frame_id)
         pub.publish(pc2.create_cloud_xyz32(header, points))

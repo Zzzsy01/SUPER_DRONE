@@ -7,6 +7,7 @@
     <arg name="cloud_publish_rate" default="5.0" />
     <arg name="point_resolution" default="0.25" />
     <arg name="boundary_resolution" default="0.10" />
+    <arg name="include_boundary_walls" default="true" />
     <arg name="start_relay" default="true" />
     <arg name="start_layout_cloud" default="true" />
     <arg name="start_super" default="true" />
@@ -29,6 +30,10 @@
         <param name="publish_rate" value="$(arg cloud_publish_rate)" type="double" />
         <param name="point_resolution" value="$(arg point_resolution)" type="double" />
         <param name="boundary_resolution" value="$(arg boundary_resolution)" type="double" />
+        <param name="include_boundary_walls" value="$(arg include_boundary_walls)" type="bool" />
+        <param name="transform_to_planning_frame" value="true" type="bool" />
+        <param name="frame_scale" value="-1,1,1" type="string" />
+        <param name="frame_offset" value="3,-1,0" type="string" />
     </node>
 
     <node if="$(arg start_super)" pkg="super_planner" name="fsm_node" type="fsm_node" output="screen">

@@ -195,6 +195,38 @@ The hover smoke:
 - Uses px4ctrl's SITL takeoff path to enter OFFBOARD and arm.
 - Targets about `1.0m`, hovers for about `8s`, then sends a LAND command and disarms if needed.
 - Records `/mavros/state`, `/mavros/local_position/odom`, `/position_cmd`, and `/mavros/setpoint_raw/attitude` to `logs/nationals_px4_sitl_hover_smoke_*.bag`.
+
+## Demo Full Route
+
+`demo_full_route` is a Gazebo/PX4 SITL display and screen-recording workflow only. It is not a real-flight workflow, and it must not be presented as strict competition-rule validation.
+
+The demo route intentionally uses SITL-only relaxations:
+
+- Dense intermediate click goals are generated between the transformed nationals waypoints.
+- The route is flown at a higher demo altitude, default `1.30m`.
+- The planning cloud can disable boundary walls by default for the demo, while the driver still checks transformed field bounds.
+- The planner uses `super_drone_px4_sitl_demo.yaml`, which is a lower-speed SITL-only config.
+
+Run:
+
+```bash
+HEADLESS=1 ./scripts/run_nationals_px4_sitl_demo_full_route.sh
+```
+
+Equivalent direct form:
+
+```bash
+STAGE=demo_full_route HEADLESS=1 ./scripts/run_nationals_px4_sitl_full_mission.sh
+```
+
+The default parameter set is height `1.30m`, waypoint spacing `0.60m`, and boundary walls disabled in `/cloud_registered` for planning. Alternative SITL-only demo attempts can be selected with:
+
+```bash
+SITL_DEMO_ALT=1.50 SITL_DEMO_SPACING=0.50 HEADLESS=1 ./scripts/run_nationals_px4_sitl_demo_full_route.sh
+SITL_DEMO_ALT=1.60 SITL_DEMO_SPACING=0.40 SITL_DEMO_SWITCH_RADIUS=1.20 HEADLESS=1 ./scripts/run_nationals_px4_sitl_demo_full_route.sh
+```
+
+Passing this demo only means PX4 SITL connected, OFFBOARD/arm/takeoff worked, the demo driver advanced through its visual route, `/position_cmd` and `/mavros/setpoint_raw/attitude` stayed fresh, and the script performed a safe exit. It does not prove 5/5 scoring, real ring traversal, or real vehicle readiness.
 - Stops on stale odom, MAVROS disconnect, missing attitude setpoints, excessive altitude, or excessive drift.
 
 This is still only a hover smoke test. It is not a full ring traversal and must not be used for a real aircraft.

@@ -7,9 +7,10 @@
     <arg name="cloud_publish_rate" default="5.0" />
     <arg name="point_resolution" default="0.25" />
     <arg name="boundary_resolution" default="0.10" />
+    <arg name="include_boundary_walls" default="true" />
 
-    <arg name="init_x" default="3.0" />
-    <arg name="init_y" default="1.0" />
+    <arg name="init_x" default="0.0" />
+    <arg name="init_y" default="0.0" />
     <arg name="init_z" default="1.0" />
     <arg name="mock_publish_rate" default="100.0" />
     <arg name="mock_max_vel" default="1.5" />
@@ -28,6 +29,10 @@
         <param name="publish_rate" value="$(arg cloud_publish_rate)" type="double" />
         <param name="point_resolution" value="$(arg point_resolution)" type="double" />
         <param name="boundary_resolution" value="$(arg boundary_resolution)" type="double" />
+        <param name="include_boundary_walls" value="$(arg include_boundary_walls)" type="bool" />
+        <param name="transform_to_planning_frame" value="true" type="bool" />
+        <param name="frame_scale" value="-1,1,1" type="string" />
+        <param name="frame_offset" value="3,-1,0" type="string" />
     </node>
 
     <node pkg="super_planner" name="fsm_node" type="fsm_node" output="screen">
@@ -53,6 +58,9 @@
           type="nationals_sim_validator.py" output="screen">
         <param name="waypoints_path" value="$(arg waypoints_path)" type="string" />
         <param name="layout_path" value="$(arg layout_path)" type="string" />
+        <param name="transform_to_planning_frame" value="true" type="bool" />
+        <param name="frame_scale" value="-1,1,1" type="string" />
+        <param name="frame_offset" value="3,-1,0" type="string" />
         <param name="validation_timeout" value="$(arg validation_timeout)" type="double" />
         <param name="keep_running" value="$(arg keep_running)" type="bool" />
     </node>
