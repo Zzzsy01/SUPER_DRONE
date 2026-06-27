@@ -6,6 +6,9 @@ SUPER_DRONE_DIR="${SUPER_DRONE_DIR:-${REPO:-${SUPER_WS}/src/SUPER_DRONE}}"
 GEZOGO_DIR="${GEZOGO_DIR:-${GUOSAI_REPO:-${HOME}/ws/gezogo-guosai}}"
 SEED="${SEED:-2026}"
 HEADLESS="${HEADLESS:-1}"
+SITL_RECORD_BAG="${SITL_RECORD_BAG:-0}"
+GUI_PREPARE_WAIT_SEC="${GUI_PREPARE_WAIT_SEC:-45}"
+GUI_HOLD_AFTER_PASS_SEC="${GUI_HOLD_AFTER_PASS_SEC:-5}"
 TIMEOUT_SEC="${TIMEOUT_SEC:-240}"
 ROS_PORT="${ROS_PORT:-11325}"
 GAZEBO_PORT="${GAZEBO_PORT:-11347}"
@@ -118,6 +121,80 @@ wait_grep() {
     done
 }
 
+wait_gzserver_pid() {
+    local timeout_s="$1"
+    local start now pid
+    start="$(date +%s)"
+    while true; do
+        pid="$(pgrep -n -x gzserver 2>/dev/null || true)"
+        if [ -n "${pid}" ]; then
+            echo "${pid}"
+            return 0
+        fi
+        now="$(date +%s)"
+        if [ "$((now - start))" -ge "${timeout_s}" ]; then
+            return 1
+        fi
+        sleep 1
+    done
+}
+
+gazebo_master_uri_from_pid() {
+    local pid="$1"
+    local uri=""
+    if [ -r "/proc/${pid}/environ" ]; then
+        uri="$(tr '\0' '\n' < "/proc/${pid}/environ" | sed -n 's/^GAZEBO_MASTER_URI=//p' | tail -n 1 || true)"
+    fi
+    if [ -z "${uri}" ]; then
+        uri="${GAZEBO_MASTER_URI:-}"
+    fi
+    if [ -z "${uri}" ]; then
+        uri="http://localhost:11345"
+    fi
+    echo "${uri}"
+}
+
+start_gazebo_gui_if_requested() {
+    if [ "${HEADLESS}" != "0" ]; then
+        echo "[gui] HEADLESS=${HEADLESS}; not starting gzclient" | tee -a "${LOG_FILE}"
+        return 0
+    fi
+    local gzserver_pid gui_master_uri gzclient_pid
+    if ! gzserver_pid="$(wait_gzserver_pid 60)"; then
+        echo "FAIL: timeout waiting for gzserver before starting gzclient" | tee -a "${LOG_FILE}"
+        return 1
+    fi
+    gui_master_uri="$(gazebo_master_uri_from_pid "${gzserver_pid}")"
+    echo "[gui] starting gzclient" | tee -a "${LOG_FILE}"
+    echo "[gui] GAZEBO_MASTER_URI=${gui_master_uri}" | tee -a "${LOG_FILE}"
+    setsid nice -n 15 env GAZEBO_MASTER_URI="${gui_master_uri}" gzclient >> "${LOG_FILE}" 2>&1 &
+    gzclient_pid="$!"
+    PIDS+=("${gzclient_pid}")
+    echo "[gui] gzclient_pid=${gzclient_pid}" | tee -a "${LOG_FILE}"
+    sleep 2
+    if ! kill -0 "${gzclient_pid}" >/dev/null 2>&1; then
+        echo "FAIL: gzclient exited before Gazebo GUI preload" | tee -a "${LOG_FILE}"
+        return 1
+    fi
+    ps aux | grep '[g]zclient' | tee -a "${LOG_FILE}" || true
+}
+
+wait_gazebo_gui_prepare_if_requested() {
+    if [ "${HEADLESS}" != "0" ]; then
+        return 0
+    fi
+    echo "[gui] waiting ${GUI_PREPARE_WAIT_SEC}s for Gazebo world to render" | tee -a "${LOG_FILE}"
+    sleep "${GUI_PREPARE_WAIT_SEC}"
+}
+
+hold_gazebo_gui_after_pass_if_requested() {
+    if [ "${HEADLESS}" != "0" ]; then
+        return 0
+    fi
+    echo "[gui] demo PASS, holding Gazebo window for ${GUI_HOLD_AFTER_PASS_SEC}s" | tee -a "${LOG_FILE}"
+    sleep "${GUI_HOLD_AFTER_PASS_SEC}"
+}
+
 wait_static_odom_for_takeoff() {
     local timeout_s="${SITL_SUPER_STATIC_ODOM_WAIT_SEC:-30}"
     local vel_max="${SITL_SUPER_STATIC_ODOM_VEL_MAX:-0.095}"
@@ -174,6 +251,7 @@ if ! rostopic list >/dev/null 2>&1; then
 fi
 
 run_bg px4_sitl env HEADLESS="${HEADLESS}" SUPER_WS="${SUPER_WS}" GEZOGO_DIR="${GEZOGO_DIR}" SEED="${SEED}" ROS_MASTER_URI="${ROS_MASTER_URI}" ROS_IP="${ROS_IP}" ROS_HOSTNAME="${ROS_HOSTNAME}" ROS_LOG_DIR="${ROS_LOG_DIR}" ROS_HOME="${ROS_HOME}" GAZEBO_MASTER_URI="${GAZEBO_MASTER_URI}" "${SUPER_DRONE_DIR}/scripts/run_nationals_px4_sitl_world.sh"
+start_gazebo_gui_if_requested
 sleep 10
 
 run_bg mavros env SUPER_WS="${SUPER_WS}" ROS_MASTER_URI="${ROS_MASTER_URI}" ROS_IP="${ROS_IP}" ROS_HOSTNAME="${ROS_HOSTNAME}" ROS_LOG_DIR="${ROS_LOG_DIR}" ROS_HOME="${ROS_HOME}" "${SUPER_DRONE_DIR}/scripts/run_nationals_mavros.sh"
@@ -186,24 +264,29 @@ wait_topic /Odom_high_freq 20
 run_bg super env SUPER_WS="${SUPER_WS}" SUPER_DRONE_DIR="${SUPER_DRONE_DIR}" GEZOGO_DIR="${GEZOGO_DIR}" SEED="${SEED}" LAYOUT_PATH="${LAYOUT_PATH}" SITL_START_MISSION=false SITL_START_SMOKE_GOAL=false SITL_PLANNER_CONFIG_NAME="${SITL_PLANNER_CONFIG_NAME:-super_drone_px4_sitl_smoke.yaml}" SITL_INCLUDE_BOUNDARY_WALLS="${SITL_INCLUDE_BOUNDARY_WALLS:-true}" ROS_MASTER_URI="${ROS_MASTER_URI}" ROS_IP="${ROS_IP}" ROS_HOSTNAME="${ROS_HOSTNAME}" ROS_LOG_DIR="${ROS_LOG_DIR}" ROS_HOME="${ROS_HOME}" "${SUPER_DRONE_DIR}/scripts/run_nationals_super_sitl_smoke.sh"
 wait_topic /cloud_registered 45
 wait_grep "fsm_node running" 45 bash -lc "rosnode list 2>/dev/null | grep -q '^/fsm_node$'"
+wait_gazebo_gui_prepare_if_requested
 
 run_bg px4ctrl env SUPER_WS="${SUPER_WS}" SITL_TAKEOFF_HEIGHT="${TARGET_ALT}" ROS_MASTER_URI="${ROS_MASTER_URI}" ROS_IP="${ROS_IP}" ROS_HOSTNAME="${ROS_HOSTNAME}" ROS_LOG_DIR="${ROS_LOG_DIR}" ROS_HOME="${ROS_HOME}" "${SUPER_DRONE_DIR}/scripts/run_nationals_px4ctrl_sitl.sh"
 wait_topic /mavros/setpoint_raw/attitude 45
 wait_grep "px4ctrl subscribes /position_cmd" 45 bash -lc "rostopic info /position_cmd 2>/dev/null | grep -q '/px4ctrl'"
 wait_static_odom_for_takeoff
 
-rosbag record -O "${BAG_PATH}" --lz4 \
-    /cloud_registered \
-    /Odom_high_freq \
-    /planning/click_goal \
-    /position_cmd \
-    /mavros/state \
-    /mavros/local_position/odom \
-    /mavros/setpoint_raw/attitude \
-    /px4ctrl/takeoff_land \
-    /rosout_agg >> "${LOG_FILE}" 2>&1 &
-PIDS+=("$!")
-sleep 1
+if [ "${SITL_RECORD_BAG}" = "1" ]; then
+    rosbag record -O "${BAG_PATH}" --lz4 \
+        /cloud_registered \
+        /Odom_high_freq \
+        /planning/click_goal \
+        /position_cmd \
+        /mavros/state \
+        /mavros/local_position/odom \
+        /mavros/setpoint_raw/attitude \
+        /px4ctrl/takeoff_land \
+        /rosout_agg >> "${LOG_FILE}" 2>&1 &
+    PIDS+=("$!")
+    sleep 1
+else
+    echo "[pointcloud_super] bag recording disabled by SITL_RECORD_BAG=${SITL_RECORD_BAG}" | tee -a "${LOG_FILE}"
+fi
 
 set +e
 timeout "${TIMEOUT_SEC}" python3 "${SUPER_DRONE_DIR}/scripts/nationals_px4_sitl_pointcloud_super_validator.py" \
@@ -223,6 +306,7 @@ echo "[pointcloud_super] log: ${LOG_FILE}" | tee -a "${LOG_FILE}"
 echo "[pointcloud_super] bag: ${BAG_PATH}" | tee -a "${LOG_FILE}"
 
 if [ "${RESULT}" -eq 0 ]; then
+    hold_gazebo_gui_after_pass_if_requested
     echo "PASS: pointcloud_super_demo mission succeeded" | tee -a "${LOG_FILE}"
     exit 0
 fi
