@@ -6,6 +6,19 @@ SUPER_DRONE_DIR="${SUPER_DRONE_DIR:-${REPO:-${SUPER_WS}/src/SUPER_DRONE}}"
 GEZOGO_DIR="${GEZOGO_DIR:-${GUOSAI_REPO:-${HOME}/ws/gezogo-guosai}}"
 SEED="${SEED:-2026}"
 HEADLESS="${HEADLESS:-1}"
+TEAMMATE_VISUAL_PROXY="${TEAMMATE_VISUAL_PROXY:-0}"
+if [ -z "${SITL_RECORD_BAG+x}" ]; then
+    if [ "${HEADLESS}" = "0" ]; then
+        SITL_RECORD_BAG=0
+    else
+        SITL_RECORD_BAG=1
+    fi
+fi
+TEAMMATE_VISUAL_MODEL_PATH="${TEAMMATE_VISUAL_MODEL_PATH:-${SUPER_DRONE_DIR}/mission_planner/models/super_mock_drone/model.sdf}"
+GUI_PREPARE_WAIT_SEC="${GUI_PREPARE_WAIT_SEC:-45}"
+GUI_HOLD_AFTER_PASS_SEC="${GUI_HOLD_AFTER_PASS_SEC:-5}"
+SITL_DEMO_STATIC_ODOM_WAIT_SEC="${SITL_DEMO_STATIC_ODOM_WAIT_SEC:-30}"
+SITL_DEMO_STATIC_ODOM_VEL_MAX="${SITL_DEMO_STATIC_ODOM_VEL_MAX:-0.095}"
 TIMEOUT_SEC="${TIMEOUT_SEC:-300}"
 ROS_PORT="${ROS_PORT:-11325}"
 GAZEBO_PORT="${GAZEBO_PORT:-11347}"
@@ -154,12 +167,34 @@ gazebo_master_uri_from_pid() {
     echo "${uri}"
 }
 
+enable_gazebo_ros_api_if_needed() {
+    if [ "${HEADLESS}" != "0" ] || [ "${TEAMMATE_VISUAL_PROXY}" != "1" ]; then
+        return 0
+    fi
+    if [ ! -x /usr/bin/gzserver ]; then
+        echo "FAIL: /usr/bin/gzserver not found for Gazebo ROS API wrapper" | tee -a "${LOG_FILE}"
+        return 1
+    fi
+    local wrapper_dir wrapper_path
+    wrapper_dir="${ROS_HOME}/gazebo_ros_api_wrapper"
+    wrapper_path="${wrapper_dir}/gzserver"
+    mkdir -p "${wrapper_dir}"
+    cat > "${wrapper_path}" <<'EOF'
+#!/usr/bin/env bash
+exec /usr/bin/gzserver -s libgazebo_ros_api_plugin.so "$@"
+EOF
+    chmod +x "${wrapper_path}"
+    export PATH="${wrapper_dir}:${PATH}"
+    export GAZEBO_PLUGIN_PATH="/opt/ros/noetic/lib:${GAZEBO_PLUGIN_PATH:-}"
+    echo "[gui] enabling Gazebo ROS API for teammate visual proxy" | tee -a "${LOG_FILE}"
+}
+
 start_gazebo_gui_if_requested() {
     if [ "${HEADLESS}" != "0" ]; then
         echo "[gui] HEADLESS=${HEADLESS}; not starting gzclient" | tee -a "${LOG_FILE}"
         return 0
     fi
-    local gzserver_pid gui_master_uri
+    local gzserver_pid gui_master_uri gzclient_pid
     if ! gzserver_pid="$(wait_gzserver_pid 60)"; then
         echo "FAIL: timeout waiting for gzserver before starting gzclient" | tee -a "${LOG_FILE}"
         return 1
@@ -168,10 +203,88 @@ start_gazebo_gui_if_requested() {
     echo "[gui] starting gzclient" | tee -a "${LOG_FILE}"
     echo "[gui] GAZEBO_MASTER_URI=${gui_master_uri}" | tee -a "${LOG_FILE}"
     setsid nice -n 15 env GAZEBO_MASTER_URI="${gui_master_uri}" gzclient >> "${LOG_FILE}" 2>&1 &
-    PIDS+=("$!")
-    echo "[gui] gzclient_pid=$!" | tee -a "${LOG_FILE}"
+    gzclient_pid="$!"
+    PIDS+=("${gzclient_pid}")
+    echo "[gui] gzclient_pid=${gzclient_pid}" | tee -a "${LOG_FILE}"
     sleep 2
+    if ! kill -0 "${gzclient_pid}" >/dev/null 2>&1; then
+        echo "FAIL: gzclient exited before Gazebo GUI preload" | tee -a "${LOG_FILE}"
+        return 1
+    fi
     ps aux | grep '[g]zclient' | tee -a "${LOG_FILE}" || true
+}
+
+start_teammate_visual_proxy_if_requested() {
+    if [ "${HEADLESS}" != "0" ] || [ "${TEAMMATE_VISUAL_PROXY}" != "1" ]; then
+        echo "[gui] teammate visual proxy disabled HEADLESS=${HEADLESS} TEAMMATE_VISUAL_PROXY=${TEAMMATE_VISUAL_PROXY}" | tee -a "${LOG_FILE}"
+        return 0
+    fi
+    echo "[gui] starting teammate visual proxy" | tee -a "${LOG_FILE}"
+    echo "[gui] teammate visual model path=${TEAMMATE_VISUAL_MODEL_PATH}" | tee -a "${LOG_FILE}"
+    setsid env ROS_MASTER_URI="${ROS_MASTER_URI}" ROS_IP="${ROS_IP}" ROS_HOSTNAME="${ROS_HOSTNAME}" ROS_LOG_DIR="${ROS_LOG_DIR}" ROS_HOME="${ROS_HOME}" \
+        python3 "${SUPER_DRONE_DIR}/scripts/nationals_px4_sitl_teammate_visual_proxy.py" \
+        _model_path:="${TEAMMATE_VISUAL_MODEL_PATH}" >> "${LOG_FILE}" 2>&1 &
+    PIDS+=("$!")
+    wait_grep "teammate_drone_visual_proxy spawned" 30 bash -lc "rostopic echo -n 1 /gazebo/model_states 2>/dev/null | grep -q 'teammate_drone_visual_proxy'"
+}
+
+wait_gazebo_gui_prepare_if_requested() {
+    if [ "${HEADLESS}" != "0" ]; then
+        return 0
+    fi
+    echo "[gui] waiting ${GUI_PREPARE_WAIT_SEC}s for Gazebo world to render" | tee -a "${LOG_FILE}"
+    sleep "${GUI_PREPARE_WAIT_SEC}"
+}
+
+hold_gazebo_gui_after_pass_if_requested() {
+    if [ "${HEADLESS}" != "0" ]; then
+        return 0
+    fi
+    echo "[gui] demo PASS, holding Gazebo window for ${GUI_HOLD_AFTER_PASS_SEC}s" | tee -a "${LOG_FILE}"
+    sleep "${GUI_HOLD_AFTER_PASS_SEC}"
+}
+
+wait_static_odom_for_takeoff() {
+    echo "[position_cmd_demo] waiting for static odom before TAKEOFF vel<=${SITL_DEMO_STATIC_ODOM_VEL_MAX}m/s timeout=${SITL_DEMO_STATIC_ODOM_WAIT_SEC}s" | tee -a "${LOG_FILE}"
+    python3 - "${SITL_DEMO_STATIC_ODOM_WAIT_SEC}" "${SITL_DEMO_STATIC_ODOM_VEL_MAX}" 2>&1 <<'PY' | tee -a "${LOG_FILE}"
+import math
+import sys
+import time
+
+import rospy
+from nav_msgs.msg import Odometry
+
+timeout_s = float(sys.argv[1])
+vel_max = float(sys.argv[2])
+latest = None
+
+def cb(msg):
+    global latest
+    latest = msg
+
+rospy.init_node("nationals_position_cmd_demo_static_odom_wait", anonymous=True, disable_signals=True)
+rospy.Subscriber("/mavros/local_position/odom", Odometry, cb, queue_size=10)
+deadline = time.monotonic() + timeout_s
+stable_since = None
+last_norm = float("nan")
+rate = rospy.Rate(20)
+while not rospy.is_shutdown() and time.monotonic() < deadline:
+    if latest is not None:
+        v = latest.twist.twist.linear
+        last_norm = math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
+        now = time.monotonic()
+        if last_norm <= vel_max:
+            if stable_since is None:
+                stable_since = now
+            if now - stable_since >= 0.5:
+                print(f"[position_cmd_demo] static odom ready vel={last_norm:.4f}m/s")
+                sys.exit(0)
+        else:
+            stable_since = None
+    rate.sleep()
+print(f"FAIL: static odom timeout last_vel={last_norm:.4f}m/s threshold={vel_max:.4f}m/s")
+sys.exit(1)
+PY
 }
 
 if [ ! -f "${LAYOUT_PATH}" ]; then
@@ -203,7 +316,8 @@ if ! rostopic list >/dev/null 2>&1; then
     sleep 3
 fi
 
-run_bg px4_sitl env HEADLESS="${HEADLESS}" SUPER_WS="${SUPER_WS}" GEZOGO_DIR="${GEZOGO_DIR}" SEED="${SEED}" ROS_MASTER_URI="${ROS_MASTER_URI}" ROS_IP="${ROS_IP}" ROS_HOSTNAME="${ROS_HOSTNAME}" ROS_LOG_DIR="${ROS_LOG_DIR}" ROS_HOME="${ROS_HOME}" GAZEBO_MASTER_URI="${GAZEBO_MASTER_URI}" "${SUPER_DRONE_DIR}/scripts/run_nationals_px4_sitl_world.sh"
+enable_gazebo_ros_api_if_needed
+run_bg px4_sitl env HEADLESS="${HEADLESS}" SUPER_WS="${SUPER_WS}" GEZOGO_DIR="${GEZOGO_DIR}" SEED="${SEED}" ROS_MASTER_URI="${ROS_MASTER_URI}" ROS_IP="${ROS_IP}" ROS_HOSTNAME="${ROS_HOSTNAME}" ROS_LOG_DIR="${ROS_LOG_DIR}" ROS_HOME="${ROS_HOME}" GAZEBO_MASTER_URI="${GAZEBO_MASTER_URI}" GAZEBO_PLUGIN_PATH="${GAZEBO_PLUGIN_PATH:-}" PATH="${PATH}" "${SUPER_DRONE_DIR}/scripts/run_nationals_px4_sitl_world.sh"
 start_gazebo_gui_if_requested
 sleep 10
 
@@ -213,12 +327,15 @@ wait_grep "MAVROS connected=True" 45 bash -lc "rostopic echo -n 1 /mavros/state 
 
 run_bg odom_relay env ROS_MASTER_URI="${ROS_MASTER_URI}" ROS_IP="${ROS_IP}" ROS_HOSTNAME="${ROS_HOSTNAME}" ROS_LOG_DIR="${ROS_LOG_DIR}" ROS_HOME="${ROS_HOME}" rosrun topic_tools relay /mavros/local_position/odom /Odom_high_freq __name:=nationals_position_cmd_demo_odom_relay
 wait_topic /Odom_high_freq 20
+start_teammate_visual_proxy_if_requested
+wait_gazebo_gui_prepare_if_requested
 
 run_bg px4ctrl env SUPER_WS="${SUPER_WS}" SITL_TAKEOFF_HEIGHT="${TARGET_ALT}" ROS_MASTER_URI="${ROS_MASTER_URI}" ROS_IP="${ROS_IP}" ROS_HOSTNAME="${ROS_HOSTNAME}" ROS_LOG_DIR="${ROS_LOG_DIR}" ROS_HOME="${ROS_HOME}" "${SUPER_DRONE_DIR}/scripts/run_nationals_px4ctrl_sitl.sh"
 wait_grep "px4ctrl subscribes /position_cmd" 45 bash -lc "rostopic info /position_cmd 2>/dev/null | grep -q '/px4ctrl'"
 wait_topic /mavros/setpoint_raw/attitude 45
+wait_static_odom_for_takeoff
 
-if [ "${SITL_RECORD_BAG:-1}" = "1" ]; then
+if [ "${SITL_RECORD_BAG}" = "1" ]; then
     rosbag record -O "${BAG_PATH}" --lz4 \
         /mavros/state \
         /mavros/local_position/odom \
@@ -251,6 +368,7 @@ echo "[position_cmd_demo] log: ${LOG_FILE}" | tee -a "${LOG_FILE}"
 echo "[position_cmd_demo] bag: ${BAG_PATH}" | tee -a "${LOG_FILE}"
 
 if [ "${RESULT}" -eq 0 ]; then
+    hold_gazebo_gui_after_pass_if_requested
     echo "PASS: position_cmd_demo mission succeeded" | tee -a "${LOG_FILE}"
     exit 0
 fi
