@@ -1,0 +1,112 @@
+Panels:
+  - Class: rviz/Displays
+    Name: Displays
+  - Class: rviz/Views
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz/Grid
+      Enabled: true
+      Name: Grid
+      Plane: XY
+      Plane Cell Count: 24
+      Cell Size: 1
+      Reference Frame: <Fixed Frame>
+    - Class: rviz/PointCloud2
+      Enabled: true
+      Name: Nationals Layout Cloud
+      Topic: /cloud_registered
+      Queue Size: 10
+      Style: Points
+      Size (Pixels): 3
+      Size (m): 0.03
+      Color Transformer: AxisColor
+      Axis: Z
+      Use Fixed Frame: true
+    - Class: rviz/Odometry
+      Enabled: true
+      Name: Drone Odom
+      Topic: /Odom_high_freq
+      Keep: 20
+      Shape:
+        Value: Axes
+        Axes Length: 0.6
+        Axes Radius: 0.08
+      Covariance:
+        Value: false
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Name: Nationals Waypoints
+      Marker Topic: /nationals_mission/waypoints
+      Queue Size: 10
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Name: Mission Status
+      Marker Topic: /nationals_mission/status
+      Queue Size: 10
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Name: SUPER Goal
+      Marker Topic: /fsm_node/visualization/goal
+      Queue Size: 10
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Name: SUPER Frontend Path
+      Marker Topic: /fsm_node/visualization/frontend_path
+      Queue Size: 10
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Name: SUPER Exp Traj
+      Marker Topic: /fsm_node/visualization/exp_traj
+      Queue Size: 10
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Name: SUPER Committed Traj
+      Marker Topic: /fsm_node/visualization/committed_traj
+      Queue Size: 10
+    - Class: rviz/Path
+      Enabled: true
+      Name: Observed Position Cmd Path
+      Topic: /nationals_mission/position_cmd_path
+      Queue Size: 10
+      Color: 25; 255; 0
+      Line Style: Lines
+      Line Width: 0.04
+    - Class: rviz/Path
+      Enabled: true
+      Name: Executed Odom Path
+      Topic: /nationals_mission/executed_path
+      Queue Size: 10
+      Color: 255; 170; 0
+      Line Style: Lines
+      Line Width: 0.05
+  Enabled: true
+  Global Options:
+    Background Color: 25; 25; 25
+    Fixed Frame: world
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz/Interact
+    - Class: rviz/MoveCamera
+    - Class: rviz/Select
+    - Class: rviz/FocusCamera
+    - Class: rviz/Measure
+  Value: true
+  Views:
+    Current:
+      Class: rviz/Orbit
+      Distance: 16
+      Focal Point:
+        X: -1
+        Y: 5
+        Z: 1
+      Pitch: 0.65
+      Yaw: 4.7
+    Saved: ~
+Window Geometry:
+  Height: 900
+  Width: 1400
+  X: 100
+  Y: 80
