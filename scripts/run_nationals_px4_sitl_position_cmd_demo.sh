@@ -121,6 +121,59 @@ wait_grep() {
     done
 }
 
+wait_gzserver_pid() {
+    local timeout_s="$1"
+    local start now pid
+    start="$(date +%s)"
+    while true; do
+        pid="$(pgrep -n -x gzserver 2>/dev/null || true)"
+        if [ -n "${pid}" ]; then
+            echo "${pid}"
+            return 0
+        fi
+        now="$(date +%s)"
+        if [ "$((now - start))" -ge "${timeout_s}" ]; then
+            return 1
+        fi
+        sleep 1
+    done
+}
+
+gazebo_master_uri_from_pid() {
+    local pid="$1"
+    local uri=""
+    if [ -r "/proc/${pid}/environ" ]; then
+        uri="$(tr '\0' '\n' < "/proc/${pid}/environ" | sed -n 's/^GAZEBO_MASTER_URI=//p' | tail -n 1 || true)"
+    fi
+    if [ -z "${uri}" ]; then
+        uri="${GAZEBO_MASTER_URI:-}"
+    fi
+    if [ -z "${uri}" ]; then
+        uri="http://localhost:11345"
+    fi
+    echo "${uri}"
+}
+
+start_gazebo_gui_if_requested() {
+    if [ "${HEADLESS}" != "0" ]; then
+        echo "[gui] HEADLESS=${HEADLESS}; not starting gzclient" | tee -a "${LOG_FILE}"
+        return 0
+    fi
+    local gzserver_pid gui_master_uri
+    if ! gzserver_pid="$(wait_gzserver_pid 60)"; then
+        echo "FAIL: timeout waiting for gzserver before starting gzclient" | tee -a "${LOG_FILE}"
+        return 1
+    fi
+    gui_master_uri="$(gazebo_master_uri_from_pid "${gzserver_pid}")"
+    echo "[gui] starting gzclient" | tee -a "${LOG_FILE}"
+    echo "[gui] GAZEBO_MASTER_URI=${gui_master_uri}" | tee -a "${LOG_FILE}"
+    setsid nice -n 15 env GAZEBO_MASTER_URI="${gui_master_uri}" gzclient >> "${LOG_FILE}" 2>&1 &
+    PIDS+=("$!")
+    echo "[gui] gzclient_pid=$!" | tee -a "${LOG_FILE}"
+    sleep 2
+    ps aux | grep '[g]zclient' | tee -a "${LOG_FILE}" || true
+}
+
 if [ ! -f "${LAYOUT_PATH}" ]; then
     GENERATOR="${GEZOGO_DIR}/tools/generate_nationals_world.py"
     if [ ! -f "${GENERATOR}" ]; then
@@ -151,6 +204,7 @@ if ! rostopic list >/dev/null 2>&1; then
 fi
 
 run_bg px4_sitl env HEADLESS="${HEADLESS}" SUPER_WS="${SUPER_WS}" GEZOGO_DIR="${GEZOGO_DIR}" SEED="${SEED}" ROS_MASTER_URI="${ROS_MASTER_URI}" ROS_IP="${ROS_IP}" ROS_HOSTNAME="${ROS_HOSTNAME}" ROS_LOG_DIR="${ROS_LOG_DIR}" ROS_HOME="${ROS_HOME}" GAZEBO_MASTER_URI="${GAZEBO_MASTER_URI}" "${SUPER_DRONE_DIR}/scripts/run_nationals_px4_sitl_world.sh"
+start_gazebo_gui_if_requested
 sleep 10
 
 run_bg mavros env SUPER_WS="${SUPER_WS}" ROS_MASTER_URI="${ROS_MASTER_URI}" ROS_IP="${ROS_IP}" ROS_HOSTNAME="${ROS_HOSTNAME}" ROS_LOG_DIR="${ROS_LOG_DIR}" ROS_HOME="${ROS_HOME}" "${SUPER_DRONE_DIR}/scripts/run_nationals_mavros.sh"
